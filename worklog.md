@@ -26,3 +26,29 @@ Stage Summary:
 - Key design: sidebar-left with timer + navigator, main content with question + options
 - Code compiles without errors, page renders 200 OK
 - Dev server experiences stability issues in sandbox (process gets killed periodically)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Hide AI question generation button when not connected to internet
+
+Work Log:
+- Created `/home/z/my-project/src/lib/useOnlineStatus.ts` - a React hook using `useSyncExternalStore` to detect online/offline status
+- Updated `AdminDashboard.tsx`:
+  - Imported `useOnlineStatus` hook
+  - Added `isOnline` state from hook
+  - Wrapped "Buat Soal AI" button with `{isOnline && (...)}` conditional render
+  - Added useEffect to close AI dialog and show toast warning when going offline while dialog is open
+- Updated `GuruDashboard.tsx`:
+  - Same changes as AdminDashboard
+  - Imported hook, conditional render of AI button, auto-close dialog on disconnect
+- Fixed lint error: replaced `useState` + `useEffect` approach with `useSyncExternalStore` (React recommended pattern for browser APIs, avoids setState-in-effect warning)
+- Final lint check: all passed with no errors
+- Dev server running and serving 200 responses
+
+Stage Summary:
+- Created reusable `useOnlineStatus` hook using `useSyncExternalStore` (React 18+ recommended pattern)
+- "Buat Soal AI" button is now hidden when `navigator.onLine` is false (no internet)
+- If AI dialog is open and connection drops, dialog auto-closes with toast warning
+- Both AdminDashboard and GuruDashboard updated
+- Lint passes cleanly

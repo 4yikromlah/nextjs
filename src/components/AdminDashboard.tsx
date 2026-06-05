@@ -8,6 +8,7 @@ import {
   Upload, Download, CheckSquare, Square, Trash2Icon, Sparkles, Wand2
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { useOnlineStatus } from '@/lib/useOnlineStatus'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -76,6 +77,7 @@ interface Result {
 
 export default function AdminDashboard() {
   const { currentUser } = useAppStore()
+  const isOnline = useOnlineStatus()
   const [activeTab, setActiveTab] = useState('ujian')
   const [stats, setStats] = useState<Stats | null>(null)
 
@@ -124,6 +126,14 @@ export default function AdminDashboard() {
   const [aiCount, setAiCount] = useState(5)
   const [aiDifficulty, setAiDifficulty] = useState('sedang')
   const [aiGenerating, setAiGenerating] = useState(false)
+
+  // Close AI dialog when going offline
+  useEffect(() => {
+    if (!isOnline && showAIDialog) {
+      setShowAIDialog(false)
+      toast.warning('Koneksi internet terputus. Fitur AI tidak tersedia.')
+    }
+  }, [isOnline])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -580,9 +590,11 @@ export default function AdminDashboard() {
                         <Button onClick={() => setShowQuestionForm(true)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs">
                           <Plus className="h-3.5 w-3.5 mr-1" /> Tambah Soal
                         </Button>
-                        <Button onClick={() => setShowAIDialog(true)} size="sm" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl text-xs shadow-md">
-                          <Sparkles className="h-3.5 w-3.5 mr-1" /> Buat Soal AI
-                        </Button>
+                        {isOnline && (
+                          <Button onClick={() => setShowAIDialog(true)} size="sm" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl text-xs shadow-md">
+                            <Sparkles className="h-3.5 w-3.5 mr-1" /> Buat Soal AI
+                          </Button>
+                        )}
                         <input ref={fileInputRef} type="file" accept=".docx,.doc" onChange={handleWordImport} className="hidden" />
                         <Button onClick={() => fileInputRef.current?.click()} disabled={importing} size="sm" variant="outline" className="rounded-xl text-xs">
                           {importing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
