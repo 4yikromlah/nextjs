@@ -38,6 +38,7 @@ interface Stats {
 interface Exam {
   id: string
   title: string
+  subject: string | null
   description: string | null
   duration: number
   isActive: boolean
@@ -86,6 +87,7 @@ export default function AdminDashboard() {
   const [examTitle, setExamTitle] = useState('')
   const [examDesc, setExamDesc] = useState('')
   const [examDuration, setExamDuration] = useState(60)
+  const [examSubject, setExamSubject] = useState('')
 
   // Questions state
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
@@ -100,6 +102,7 @@ export default function AdminDashboard() {
   const [qE, setQE] = useState('')
   const [qCorrect, setQCorrect] = useState('A')
   const [qExplanation, setQExplanation] = useState('')
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
 
   // Results state
   const [results, setResults] = useState<Result[]>([])
@@ -167,7 +170,7 @@ export default function AdminDashboard() {
         const res = await fetch(`/api/exams/${editingExam.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: examTitle, description: examDesc, duration: examDuration }),
+          body: JSON.stringify({ title: examTitle, subject: examSubject, description: examDesc, duration: examDuration }),
         })
         if (res.ok) { toast.success('Ujian berhasil diperbarui'); fetchExams(); fetchStats() }
         else toast.error('Gagal memperbarui ujian')
@@ -175,7 +178,7 @@ export default function AdminDashboard() {
         const res = await fetch('/api/exams', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: examTitle, description: examDesc, duration: examDuration, createdBy: currentUser?.id }),
+          body: JSON.stringify({ title: examTitle, subject: examSubject, description: examDesc, duration: examDuration, createdBy: currentUser?.id }),
         })
         if (res.ok) { toast.success('Ujian berhasil dibuat'); fetchExams(); fetchStats() }
         else toast.error('Gagal membuat ujian')
@@ -188,6 +191,7 @@ export default function AdminDashboard() {
     setShowExamForm(false)
     setEditingExam(null)
     setExamTitle('')
+    setExamSubject('')
     setExamDesc('')
     setExamDuration(60)
   }
@@ -264,7 +268,7 @@ export default function AdminDashboard() {
   }
 
   const handleEditExam = (exam: Exam) => {
-    setEditingExam(exam); setExamTitle(exam.title); setExamDesc(exam.description || ''); setExamDuration(exam.duration)
+    setEditingExam(exam); setExamTitle(exam.title); setExamSubject(exam.subject || ''); setExamDesc(exam.description || ''); setExamDuration(exam.duration)
     setShowExamForm(true)
   }
 
@@ -273,21 +277,43 @@ export default function AdminDashboard() {
   }
 
   // Question CRUD
+  const handleEditQuestion = (q: Question) => {
+    setEditingQuestion(q)
+    setQText(q.questionText)
+    setQA(q.optionA)
+    setQB(q.optionB)
+    setQC(q.optionC)
+    setQD(q.optionD)
+    setQE(q.optionE)
+    setQCorrect(q.correctAnswer)
+    setQExplanation(q.explanation || '')
+    setShowQuestionForm(true)
+  }
+
   const handleSaveQuestion = async () => {
     if (!qText || !qA || !qB || !qC || !qD || !qE || !qCorrect) { toast.error('Semua field soal harus diisi'); return }
     if (!selectedExam) return
     try {
-      const res = await fetch(`/api/exams/${selectedExam.id}/questions`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionText: qText, optionA: qA, optionB: qB, optionC: qC, optionD: qD, optionE: qE, correctAnswer: qCorrect, explanation: qExplanation }),
-      })
-      if (res.ok) { toast.success('Soal berhasil ditambahkan'); fetchQuestions(selectedExam.id); fetchStats(); resetQuestionForm() }
-      else toast.error('Gagal menambahkan soal')
+      if (editingQuestion) {
+        const res = await fetch(`/api/questions/${editingQuestion.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionText: qText, optionA: qA, optionB: qB, optionC: qC, optionD: qD, optionE: qE, correctAnswer: qCorrect, explanation: qExplanation }),
+        })
+        if (res.ok) { toast.success('Soal berhasil diperbarui'); fetchQuestions(selectedExam.id); fetchStats(); resetQuestionForm() }
+        else toast.error('Gagal memperbarui soal')
+      } else {
+        const res = await fetch(`/api/exams/${selectedExam.id}/questions`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionText: qText, optionA: qA, optionB: qB, optionC: qC, optionD: qD, optionE: qE, correctAnswer: qCorrect, explanation: qExplanation }),
+        })
+        if (res.ok) { toast.success('Soal berhasil ditambahkan'); fetchQuestions(selectedExam.id); fetchStats(); resetQuestionForm() }
+        else toast.error('Gagal menambahkan soal')
+      }
     } catch { toast.error('Terjadi kesalahan') }
   }
 
   const resetQuestionForm = () => {
-    setShowQuestionForm(false); setQText(''); setQA(''); setQB(''); setQC(''); setQD(''); setQE(''); setQCorrect('A'); setQExplanation('')
+    setShowQuestionForm(false); setEditingQuestion(null); setQText(''); setQA(''); setQB(''); setQC(''); setQD(''); setQE(''); setQCorrect('A'); setQExplanation('')
   }
 
   const handleDeleteQuestion = async () => {
@@ -474,6 +500,7 @@ export default function AdminDashboard() {
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2"><Label className="text-sm font-medium">Judul Ujian</Label><Input value={examTitle} onChange={(e) => setExamTitle(e.target.value)} placeholder="Contoh: Ujian Matematika XII" className="neu-input bg-transparent" /></div>
+                        <div className="space-y-2"><Label className="text-sm font-medium">Mata Pelajaran</Label><Input value={examSubject} onChange={(e) => setExamSubject(e.target.value)} placeholder="Contoh: Matematika" className="neu-input bg-transparent" /></div>
                         <div className="space-y-2"><Label className="text-sm font-medium">Durasi (menit)</Label><Input type="number" value={examDuration} onChange={(e) => setExamDuration(parseInt(e.target.value) || 60)} className="neu-input bg-transparent" /></div>
                       </div>
                       <div className="space-y-2"><Label className="text-sm font-medium">Deskripsi</Label><Textarea value={examDesc} onChange={(e) => setExamDesc(e.target.value)} placeholder="Deskripsi ujian (opsional)" className="neu-input bg-transparent min-h-[80px]" /></div>
@@ -508,6 +535,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           {exam.description && <p className="text-xs text-gray-500 mb-2 line-clamp-2">{exam.description}</p>}
+                          {exam.subject && <Badge className="bg-amber-100 text-amber-700 text-[10px] mb-2">{exam.subject}</Badge>}
                           <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
                             <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{exam._count?.questions ?? 0} soal</span>
                             <span className="flex items-center gap-1"><Users className="h-3 w-3" />{exam._count?.sessions ?? 0} peserta</span>
@@ -568,7 +596,7 @@ export default function AdminDashboard() {
                       {showQuestionForm && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                           <div className="neo-glass p-5 space-y-4">
-                            <h4 className="font-semibold text-gray-700 text-sm">Tambah Soal Baru</h4>
+                            <h4 className="font-semibold text-gray-700 text-sm">{editingQuestion ? 'Edit Soal' : 'Tambah Soal Baru'}</h4>
                             <div className="space-y-2"><Label className="text-xs font-medium">Teks Soal</Label><Textarea value={qText} onChange={(e) => setQText(e.target.value)} placeholder="Tulis soal di sini..." className="neu-input bg-transparent min-h-[80px]" /></div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {[{ label: 'Opsi A', value: qA, set: setQA }, { label: 'Opsi B', value: qB, set: setQB }, { label: 'Opsi C', value: qC, set: setQC }, { label: 'Opsi D', value: qD, set: setQD }, { label: 'Opsi E', value: qE, set: setQE }].map((opt) => (
@@ -642,6 +670,9 @@ export default function AdminDashboard() {
                                     {q.explanation && <Badge variant="outline" className="text-xs text-gray-500">Pembahasan tersedia</Badge>}
                                   </div>
                                 </div>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-400 hover:text-blue-600 shrink-0" onClick={() => handleEditQuestion(q)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
                                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 shrink-0" onClick={() => setDeleteDialog({ type: 'question', id: q.id, name: `Soal ${idx + 1}` })}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>

@@ -6,11 +6,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const subject = searchParams.get('subject')
     const createdBy = searchParams.get('createdBy')
+    const studentSubject = searchParams.get('studentSubject')
 
     const where: Record<string, unknown> = {}
 
+    // Filter by creator's subject (for guru dashboard)
     if (subject) {
-      where.creator = { subject: subject }
+      where.OR = [
+        { subject: subject },
+        { creator: { subject: subject } },
+      ]
+    }
+
+    // Filter by exam subject (for student dashboard - show exams matching their subject)
+    if (studentSubject) {
+      where.subject = studentSubject
     }
 
     if (createdBy) {
@@ -34,7 +44,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, duration, createdBy } = await request.json()
+    const { title, description, subject, duration, createdBy } = await request.json()
 
     if (!title || !createdBy) {
       return NextResponse.json({ error: 'Title dan createdBy harus diisi' }, { status: 400 })
@@ -44,6 +54,7 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description: description || null,
+        subject: subject || null,
         duration: duration || 60,
         createdBy,
         isActive: false,

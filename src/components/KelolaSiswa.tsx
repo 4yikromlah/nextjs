@@ -138,12 +138,12 @@ export default function KelolaSiswa() {
     try {
       if (editingId) {
         const body: Record<string, string> = {
-          username: formUsername,
-          name: formName,
-          class: formClass,
-          subject: formSubject,
+          username: formUsername.trim(),
+          name: formName.trim(),
+          class: formClass.trim(),
+          subject: formSubject.trim(),
         }
-        if (formPassword.trim()) body.password = formPassword
+        if (formPassword.trim()) body.password = formPassword.trim()
 
         const res = await fetch(`/api/students/${editingId}`, {
           method: 'PUT',
@@ -153,7 +153,7 @@ export default function KelolaSiswa() {
         const data = await res.json()
         if (res.ok) {
           toast.success('Akun siswa berhasil diperbarui')
-          fetchStudents()
+          await fetchStudents()
           handleCloseForm()
         } else {
           toast.error(data.error || 'Gagal memperbarui akun')
@@ -163,17 +163,17 @@ export default function KelolaSiswa() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: formUsername,
-            name: formName,
-            class: formClass,
-            subject: formSubject,
-            password: formPassword || 'siswa',
+            username: formUsername.trim(),
+            name: formName.trim(),
+            class: formClass.trim(),
+            subject: formSubject.trim(),
+            password: formPassword.trim() || 'siswa',
           }),
         })
         const data = await res.json()
         if (res.ok) {
           toast.success('Akun siswa berhasil ditambahkan')
-          fetchStudents()
+          await fetchStudents()
           handleCloseForm()
         } else {
           toast.error(data.error || 'Gagal menambahkan akun')

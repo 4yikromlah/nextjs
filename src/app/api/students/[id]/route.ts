@@ -56,11 +56,16 @@ export async function PUT(
 
     // Build update data
     const updateData: Record<string, unknown> = {}
-    if (username) updateData.username = username
-    if (name) updateData.name = name
+    if (username !== undefined) updateData.username = username
+    if (name !== undefined) updateData.name = name
     if (studentClass !== undefined) updateData.class = studentClass || null
     if (subject !== undefined) updateData.subject = subject || null
     if (password && password.trim() !== '') updateData.password = await bcrypt.hash(password, 10)
+
+    // Only update if there are fields to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'Tidak ada data yang diperbarui' }, { status: 400 })
+    }
 
     const student = await db.user.update({
       where: { id },

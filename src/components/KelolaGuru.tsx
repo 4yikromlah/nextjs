@@ -18,6 +18,7 @@ interface Guru {
   username: string
   name: string
   subject: string
+  password: string
   createdAt: string
 }
 
@@ -352,7 +353,7 @@ export default function KelolaGuru() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 font-mono">{guru.username}</TableCell>
-                    <TableCell className="text-sm text-gray-400">••••••••</TableCell>
+                    <TableCell className="text-sm text-gray-600 font-mono">{guru.password}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-2">
                         <Button

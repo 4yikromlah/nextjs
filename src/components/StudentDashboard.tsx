@@ -16,6 +16,7 @@ interface Exam {
   description: string | null
   duration: number
   isActive: boolean
+  subject: string | null
   createdBy: string
   createdAt: string
   _count?: { questions: number; sessions: number }
@@ -44,9 +45,19 @@ export default function StudentDashboard() {
   const fetchExams = useCallback(async () => {
     try {
       const res = await fetch('/api/exams')
-      if (res.ok) setExams(await res.json())
+      if (res.ok) {
+        const allExams = await res.json()
+        // Filter: show active exams that match student's subject, or exams without subject set
+        if (currentUser?.subject) {
+          setExams(allExams.filter((e: Exam) =>
+            e.isActive && (e.subject?.toLowerCase() === currentUser.subject?.toLowerCase() || !e.subject)
+          ))
+        } else {
+          setExams(allExams.filter((e: Exam) => e.isActive))
+        }
+      }
     } catch { /* ignore */ }
-  }, [])
+  }, [currentUser?.subject])
 
   const fetchSessions = useCallback(async () => {
     if (!currentUser) return
@@ -86,7 +97,8 @@ export default function StudentDashboard() {
     }
   }
 
-  const activeExams = exams.filter((e) => e.isActive)
+  // Exams are already filtered by subject in fetchExams
+  const availableExams = exams
   const completedSessions = sessions.filter((s) => s.status === 'COMPLETED')
   const inProgressSessions = sessions.filter((s) => s.status === 'IN_PROGRESS')
 
@@ -103,6 +115,9 @@ export default function StudentDashboard() {
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Halo, {currentUser?.name}!</h2>
                 <p className="text-sm text-gray-500">Selamat datang di SIMULASI-Online. Siap mengerjakan ujian?</p>
+                {currentUser?.subject && (
+                  <p className="text-xs text-blue-600 font-medium mt-1">Mata Pelajaran: {currentUser.subject}</p>
+                )}
               </div>
             </div>
           </div>
@@ -126,15 +141,15 @@ export default function StudentDashboard() {
               <div className="flex justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
               </div>
-            ) : activeExams.length === 0 ? (
+            ) : availableExams.length === 0 ? (
               <div className="glass-card p-12 text-center">
                 <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="font-medium text-gray-500">Belum ada ujian tersedia</p>
+                <p className="font-medium text-gray-500">Belum ada ujian tersedia untuk mata pelajaran Anda</p>
                 <p className="text-xs text-gray-400">Ujian akan muncul ketika admin mengaktifkannya</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activeExams.map((exam) => {
+                {availableExams.map((exam) => {
                   const completedSession = sessions.find(
                     (s) => s.examId === exam.id && s.status === 'COMPLETED'
                   )

@@ -28,6 +28,7 @@ model Exam {
   id          String   @id @default(cuid())
   title       String
   description String?
+  subject     String?  // Mata pelajaran
   duration    Int      @default(60) // Durasi dalam menit
   isActive    Boolean  @default(false)
   createdBy   String

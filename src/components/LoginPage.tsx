@@ -76,11 +76,11 @@ export default function LoginPage() {
       usernamePlaceholder: 'Masukkan username Anda...',
       passwordLabel: 'PASSWORD :',
       passwordPlaceholder: 'Masukkan password Anda...',
-      showExamSelect: true,
+      showExamSelect: false,
       infoTitle: 'INFO untuk SISWA :',
       infoText: 'Daftar siswa diketahui sepenuhnya di Menu Admin Kelola Siswa. Gunakan Username : NISN dan Password : siswa untuk login yang bersamaan, silahkan komunikasi pada guru pembina.',
-      buttonText: 'MULAI KERJAKAN UJIAN',
-      buttonIcon: Play,
+      buttonText: 'MASUK PORTAL SISWA',
+      buttonIcon: GraduationCap,
     },
     guru: {
       label: 'Portal Guru',
@@ -116,10 +116,6 @@ export default function LoginPage() {
     e.preventDefault()
     if (!username || !password) {
       toast.error('Harap isi username dan password')
-      return
-    }
-    if (portal === 'siswa' && !selectedExam) {
-      toast.error('Harap pilih ujian terlebih dahulu')
       return
     }
     setLoading(true)

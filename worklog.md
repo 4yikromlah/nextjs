@@ -1,125 +1,139 @@
+# CBT Project Worklog
+
 ---
 Task ID: 1
-Agent: main
-Task: Fix varied correct answers in seed data (not always A) + detailed explanations
+Agent: Main Agent
+Task: Add subject (mata pelajaran) field to Exam model + form + API
 
 Work Log:
-- Updated seed data in /api/auth/seed/route.ts to have varied correct answers (A, B, C, D, E)
-- Bahasa Indonesia exam: A=2, B=3, C=3, D=1, E=1
-- Matematika exam: A=6, B=3, C=1, D=0, E=0 (math questions naturally have more A answers but not all A)
-- Added detailed explanations with step-by-step reasoning for all 20 questions
-- Each explanation includes: main calculation/reasoning, why each wrong option is incorrect
-- Increased question count from 5 to 10 per exam
-- Reset database and re-seeded with new data
+- Added `subject` field (String, optional) to Exam model in prisma/schema.prisma
+- Ran db:push to apply schema migration
+- Updated POST /api/exams to accept `subject` parameter
+- Updated GET /api/exams to support `studentSubject` filter param and improved `subject` filter with OR clause
+- Updated seed data to include `subject: 'Matematika'` and `subject: 'Bahasa Indonesia'` for existing exams
+- Updated existing exams in DB via SQL to set subjects
 
 Stage Summary:
-- Seed data now has varied correct answers instead of all A
-- All explanations are detailed with step-by-step reasoning
-- 10 questions per exam (up from 5)
+- Exam model now has optional `subject` field
+- Exam creation API accepts subject
+- Exam listing API can filter by studentSubject (for student dashboard)
+- Existing seeded exams have subjects set correctly
 
 ---
 Task ID: 2
-Agent: main
-Task: Fix activate button (tombol aktifkan tidak berfungsi)
+Agent: Main Agent + Subagents
+Task: Add question editing (edit soal) functionality
 
 Work Log:
-- Fixed handleToggleExam in both AdminDashboard.tsx and GuruDashboard.tsx
-- Added fetchStats() call after toggle to update statistics
-- Added selectedExam state update to reflect toggle immediately in preview panel
-- Added error handling for non-ok responses
+- Created new API route: PUT /api/questions/[id] for updating questions
+- Created new API route: DELETE /api/questions/[id] for deleting single questions (was missing before)
+- Updated AdminDashboard.tsx: added editingQuestion state, handleEditQuestion function, edit button per question, dynamic form title
+- Updated GuruDashboard.tsx: same question editing functionality added
 
 Stage Summary:
-- Activate/deactivate button now properly updates UI state
-- Stats refresh after toggle
-- Preview panel shows correct active status immediately
+- Questions can now be edited (pencil icon button next to each question)
+- Single question deletion now works (was broken before due to missing route)
+- Form title changes between "Tambah Soal Baru" and "Edit Soal" based on state
 
 ---
 Task ID: 3
-Agent: main
-Task: Add AI-assisted question generation with LLM skill
+Agent: Main Agent
+Task: Fix student edit not saving to student list
 
 Work Log:
-- Created new API route: /api/ai/generate-questions/route.ts
-- Uses z-ai-web-dev-sdk for LLM integration
-- System prompt ensures: varied correct answers, detailed explanations, Indonesian curriculum
-- Supports: subject, topic, count (1-50), difficulty (mudah/sedang/sulit)
-- Added AI generation dialog UI in AdminDashboard.tsx
-- Added AI generation dialog UI in GuruDashboard.tsx
-- Dialog includes: Mata Pelajaran, Topik, Jumlah Soal, Tingkat Kesulitan
-- Purple gradient styling for AI-related UI elements
+- Changed `fetchStudents()` to `await fetchStudents()` in handleSave (KelolaSiswa)
+- Added `.trim()` to all form values before sending to API
+- Fixed API PUT handler to use `username !== undefined` instead of `if (username)` (which would fail for falsy values)
+- Added validation that at least one field exists for update
 
 Stage Summary:
-- AI question generation fully implemented
-- Dialog UI with subject, topic, count, difficulty fields
-- Questions generated with varied answers and detailed explanations
+- Student edit now properly awaits the fetch before closing the form
+- API is more robust with undefined checks instead of truthiness checks
+- Form values are trimmed before submission
 
 ---
 Task ID: 4
-Agent: main
-Task: Remove question count limits (make unlimited)
+Agent: Main Agent
+Task: Student dashboard - only show exams matching student's subject
 
 Work Log:
-- AI generation supports up to 50 questions per batch
-- No hard limit on total questions per exam
-- Users can generate multiple batches
-- Exam form has no question limit field
+- Updated StudentDashboard.tsx fetchExams to filter by student's subject
+- Exams with matching subject OR no subject set are shown to students
+- Added subject display in welcome card
+- Changed `activeExams` to `availableExams` for clarity
 
 Stage Summary:
-- Question count is effectively unlimited (50 per AI batch, unlimited manual/Word import)
+- Students only see exams matching their enrolled subject
+- Exams without a subject are visible to all students
+- Student's subject is shown in the dashboard welcome message
 
 ---
 Task ID: 5
-Agent: main
-Task: Add checkbox on each row in student list + toggle delete all in KelolaSiswa
+Agent: Main Agent
+Task: Student login - only username and password (remove exam selection)
 
 Work Log:
-- Added checkbox column to student table header with select all toggle
-- Added individual checkbox on each student row
-- Added selection actions bar (appears when items selected)
-- Shows count of selected students
-- Added bulk delete button with confirmation dialog
-- Selected rows highlighted with blue background
-- Bulk delete iterates through selected IDs and deletes each
+- Changed `showExamSelect: false` for siswa portal config
+- Changed button text from "MULAI KERJAKAN UJIAN" to "MASUK PORTAL SISWA"
+- Changed button icon from Play to GraduationCap
+- Removed exam selection validation from handleLogin
 
 Stage Summary:
-- Checkboxes on each student row working
-- Select all toggle in header
-- Selection bar with count and bulk delete button
-- Bulk delete confirmation dialog
+- Student login no longer requires selecting an exam first
+- Students log in with just username and password
+- Exam selection happens on the student dashboard instead
 
 ---
 Task ID: 6
-Agent: main
-Task: Make explanations/pembahasan more detailed everywhere
+Agent: Main Agent
+Task: Show teacher password in teacher list
 
 Work Log:
-- Seed data explanations now include step-by-step reasoning
-- Each explanation explains why wrong options are incorrect
-- AI generation prompt explicitly requests detailed step-by-step explanations
-- Word import preserves whatever explanation is in the document
+- Added `password: string` to Guru interface in KelolaGuru.tsx
+- Changed password display from "••••••••" to `{guru.password}` which shows the actual password
+- Teachers API already returns `password: DEFAULT_GURU_PASSWORD` ("guru")
 
 Stage Summary:
-- Detailed explanations in seed data and AI-generated questions
-- AI prompt specifically requests rinci (detailed) explanations
+- Teacher passwords are now visible in the Kelola Guru table
+- Shows the default password "guru" for all teachers
 
 ---
-Task ID: 7
-Agent: main
-Task: Browser verification of all changes
+Task ID: 2b
+Agent: Subagent (full-stack-developer)
+Task: Update AdminDashboard - add subject to exam form + question editing
 
 Work Log:
-- Opened browser to http://localhost:3000
-- Verified login page with Siswa, Guru, Admin portals
-- Logged in as admin, verified dashboard
-- Exam cards show with correct data (10 soal each)
-- "Buat Soal AI" button visible in preview panel
-- AI dialog opens with all fields (Mata Pelajaran, Topik, Jumlah Soal, Tingkat Kesulitan)
-- Kelola Siswa tab shows checkboxes on each row and select all toggle
-- Hasil Ujian tab shows search, filter by exam package, and export CSV
-- Activate/deactivate button visible on exam cards
+- Added `subject: string | null` to Exam interface
+- Added `examSubject` state variable
+- Added subject input field in exam creation form
+- Updated handleSaveExam to include subject in POST/PUT body
+- Updated handleEditExam to set examSubject
+- Updated resetExamForm to reset examSubject
+- Added `editingQuestion` state variable
+- Added `handleEditQuestion` function
+- Updated handleSaveQuestion to use PUT for editing
+- Updated resetQuestionForm to clear editingQuestion
+- Dynamic form title (Edit Soal vs Tambah Soal Baru)
+- Added edit button (pencil icon) to each question
+- Added subject badge on exam cards
 
 Stage Summary:
-- All features verified working in browser
-- AI generation dialog functional
-- Student checkboxes and bulk delete working
-- Exam results search and filtering working
+- AdminDashboard now has subject field in exam form
+- Questions can be edited inline
+- Subject badge shown on exam cards
+
+---
+Task ID: 2c
+Agent: Subagent (full-stack-developer)
+Task: Update GuruDashboard - add subject to exam form + question editing
+
+Work Log:
+- Same changes as AdminDashboard but with emerald color theme
+- Subject auto-filled with guruSubject when creating new exam
+- Subject editable even when pre-filled
+- Question editing with same functionality
+
+Stage Summary:
+- GuruDashboard now has subject field in exam form (pre-filled)
+- Questions can be edited inline
+- Subject badge shown on exam cards

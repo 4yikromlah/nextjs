@@ -80,6 +80,7 @@ export async function POST() {
           data: {
             title: 'Ujian Matematika Kelas XII',
             description: 'Ujian Akhir Semester Genap Mata Pelajaran Matematika',
+            subject: 'Matematika',
             duration: 90,
             isActive: true,
             createdBy: mulyadi.id,
@@ -224,6 +225,7 @@ export async function POST() {
           data: {
             title: 'Ujian Bahasa Indonesia Kelas XI',
             description: 'Ujian Akhir Semester Genap Mata Pelajaran Bahasa Indonesia',
+            subject: 'Bahasa Indonesia',
             duration: 60,
             isActive: true,
             createdBy: sari.id,
