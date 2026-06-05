@@ -6,6 +6,7 @@ import { useAppStore, type View } from '@/lib/store'
 import Header from '@/components/Header'
 import LoginPage from '@/components/LoginPage'
 import AdminDashboard from '@/components/AdminDashboard'
+import GuruDashboard from '@/components/GuruDashboard'
 import StudentDashboard from '@/components/StudentDashboard'
 import ExamTaking from '@/components/ExamTaking'
 
@@ -19,8 +20,10 @@ export default function Home() {
       if (savedUser) {
         const user = JSON.parse(savedUser)
         setCurrentUser(user)
-        if (user.role === 'ADMIN' || user.role === 'GURU') {
+        if (user.role === 'ADMIN') {
           setCurrentView('admin')
+        } else if (user.role === 'GURU') {
+          setCurrentView('guru')
         } else {
           setCurrentView('student')
         }
@@ -36,6 +39,8 @@ export default function Home() {
         return <LoginPage />
       case 'admin':
         return currentUser ? <AdminDashboard /> : <LoginPage />
+      case 'guru':
+        return currentUser ? <GuruDashboard /> : <LoginPage />
       case 'student':
         return currentUser ? <StudentDashboard /> : <LoginPage />
       case 'exam':

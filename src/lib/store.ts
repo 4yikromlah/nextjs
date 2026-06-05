@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type View = 'login' | 'admin' | 'student' | 'exam'
+export type View = 'login' | 'admin' | 'guru' | 'student' | 'exam'
 export type LoginPortal = 'siswa' | 'guru' | 'admin'
 
 export interface User {

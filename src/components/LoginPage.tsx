@@ -153,8 +153,10 @@ export default function LoginPage() {
       localStorage.setItem('cbt_user', JSON.stringify(user))
       setCurrentUser(user)
 
-      if (user.role === 'ADMIN' || user.role === 'GURU') {
+      if (user.role === 'ADMIN') {
         setCurrentView('admin')
+      } else if (user.role === 'GURU') {
+        setCurrentView('guru')
       } else {
         setCurrentView('student')
       }

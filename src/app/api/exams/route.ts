@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const subject = searchParams.get('subject')
+    const createdBy = searchParams.get('createdBy')
+
+    const where: Record<string, unknown> = {}
+
+    if (subject) {
+      where.creator = { subject: subject }
+    }
+
+    if (createdBy) {
+      where.createdBy = createdBy
+    }
+
     const exams = await db.exam.findMany({
+      where,
       include: {
         _count: { select: { questions: true, sessions: true } },
-        creator: { select: { name: true } },
+        creator: { select: { name: true, subject: true } },
       },
       orderBy: { createdAt: 'desc' }
     })

@@ -4,10 +4,18 @@ import bcrypt from 'bcryptjs'
 
 const DEFAULT_SISWA_PASSWORD = 'siswa'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const subject = searchParams.get('subject')
+
+    const where: Record<string, unknown> = { role: 'SISWA' }
+    if (subject) {
+      where.subject = subject
+    }
+
     const students = await db.user.findMany({
-      where: { role: 'SISWA' },
+      where,
       select: {
         id: true,
         username: true,
