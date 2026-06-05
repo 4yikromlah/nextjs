@@ -1,85 +1,125 @@
 import { create } from 'zustand'
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+export type View = 'login' | 'admin' | 'student' | 'exam'
+export type LoginPortal = 'siswa' | 'guru' | 'admin'
 
-export interface HeaderEntry {
+export interface User {
   id: string
-  key: string
-  value: string
-  enabled: boolean
+  username: string
+  name: string
+  role: 'ADMIN' | 'GURU' | 'SISWA'
+  class?: string | null
+  subject?: string | null
 }
 
-export interface KeyValue {
+export interface ExamData {
   id: string
-  key: string
-  value: string
-  enabled: boolean
+  title: string
+  description?: string | null
+  duration: number
+  isActive: boolean
+  createdBy: string
+  createdAt: string
+  _count?: { questions: number; sessions: number }
 }
 
-export interface ResponseData {
-  status: number
-  statusText: string
-  headers: Record<string, string>
-  body: string
-  size: number
-  time: number
+export interface QuestionData {
+  id: string
+  examId: string
+  questionText: string
+  optionA: string
+  optionB: string
+  optionC: string
+  optionD: string
+  optionE: string
+  correctAnswer: string
+  explanation?: string | null
+  order: number
+}
+
+export interface ExamSessionData {
+  id: string
+  userId: string
+  examId: string
+  startTime: string
+  endTime?: string | null
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED'
+  score?: number | null
+  exam?: ExamData
+  answers?: AnswerData[]
+}
+
+export interface AnswerData {
+  id: string
+  sessionId: string
+  questionId: string
+  selectedAnswer?: string | null
+  isCorrect?: boolean | null
+  question?: QuestionData
+}
+
+export interface GuruData {
+  id: string
+  username: string
+  name: string
+  subject: string
+  password: string
+  createdAt: string
 }
 
 interface AppState {
-  // Request
-  method: HttpMethod
-  setMethod: (method: HttpMethod) => void
-  url: string
-  setUrl: (url: string) => void
-  headers: HeaderEntry[]
-  setHeaders: (headers: HeaderEntry[]) => void
-  body: string
-  setBody: (body: string) => void
-  params: KeyValue[]
-  setParams: (params: KeyValue[]) => void
+  // Auth
+  currentUser: User | null
+  setCurrentUser: (user: User | null) => void
 
-  // Response
-  response: ResponseData | null
-  setResponse: (response: ResponseData | null) => void
+  // Navigation
+  currentView: View
+  setCurrentView: (view: View) => void
+
+  // Login portal
+  loginPortal: LoginPortal
+  setLoginPortal: (portal: LoginPortal) => void
+
+  // Admin state
+  adminTab: string
+  setAdminTab: (tab: string) => void
+  selectedExam: ExamData | null
+  setSelectedExam: (exam: ExamData | null) => void
+
+  // Student state
+  studentTab: string
+  setStudentTab: (tab: string) => void
+  activeSession: ExamSessionData | null
+  setActiveSession: (session: ExamSessionData | null) => void
+  activeExamId: string | null
+  setActiveExamId: (id: string | null) => void
+  activeSessionId: string | null
+  setActiveSessionId: (id: string | null) => void
+
+  // Loading
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
-
-  // UI State
-  prettyPrint: boolean
-  setPrettyPrint: (pretty: boolean) => void
-  activeTab: string
-  setActiveTab: (tab: string) => void
-  requestTab: string
-  setRequestTab: (tab: string) => void
-  showRequestBody: boolean
-  setShowRequestBody: (show: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  method: 'GET',
-  setMethod: (method) => set({ method }),
-  url: '',
-  setUrl: (url) => set({ url }),
-  headers: [
-    { id: '1', key: 'Content-Type', value: 'application/json', enabled: true },
-  ],
-  setHeaders: (headers) => set({ headers }),
-  body: '',
-  setBody: (body) => set({ body }),
-  params: [],
-  setParams: (params) => set({ params }),
-
-  response: null,
-  setResponse: (response) => set({ response }),
+  currentUser: null,
+  setCurrentUser: (currentUser) => set({ currentUser }),
+  currentView: 'login',
+  setCurrentView: (currentView) => set({ currentView }),
+  loginPortal: 'siswa',
+  setLoginPortal: (loginPortal) => set({ loginPortal }),
+  adminTab: 'exams',
+  setAdminTab: (adminTab) => set({ adminTab }),
+  selectedExam: null,
+  setSelectedExam: (selectedExam) => set({ selectedExam }),
+  studentTab: 'exams',
+  setStudentTab: (studentTab) => set({ studentTab }),
+  activeSession: null,
+  setActiveSession: (activeSession) => set({ activeSession }),
+  activeExamId: null,
+  setActiveExamId: (activeExamId) => set({ activeExamId }),
+  activeSessionId: null,
+  setActiveSessionId: (activeSessionId) => set({ activeSessionId }),
   isLoading: false,
   setIsLoading: (isLoading) => set({ isLoading }),
-
-  prettyPrint: true,
-  setPrettyPrint: (prettyPrint) => set({ prettyPrint }),
-  activeTab: 'body',
-  setActiveTab: (activeTab) => set({ activeTab }),
-  requestTab: 'params',
-  setRequestTab: (requestTab) => set({ requestTab }),
-  showRequestBody: false,
-  setShowRequestBody: (showRequestBody) => set({ showRequestBody }),
 }))

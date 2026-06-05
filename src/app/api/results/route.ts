@@ -6,8 +6,8 @@ export async function GET() {
     const sessions = await db.examSession.findMany({
       where: { status: 'COMPLETED' },
       include: {
-        exam: { select: { title: true } },
-        user: { select: { name: true, email: true, class: true } },
+        exam: { select: { title: true, duration: true } },
+        user: { select: { name: true, username: true, class: true } },
       },
       orderBy: { startTime: 'desc' },
     })

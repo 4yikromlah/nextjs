@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     const sessions = await db.examSession.findMany({
       where,
       include: {
-        user: { select: { name: true, email: true, class: true } },
+        user: { select: { name: true, username: true, class: true } },
         exam: { select: { title: true, duration: true } },
-        _count: { select: { answers: true } }
+        _count: { select: { answers: true } },
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { userId, examId } = await request.json()
+
     if (!userId || !examId) {
       return NextResponse.json({ error: 'userId dan examId harus diisi' }, { status: 400 })
     }
@@ -44,10 +45,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(existing)
     }
 
+    // Verify exam exists and is active
+    const exam = await db.exam.findUnique({ where: { id: examId } })
+    if (!exam) {
+      return NextResponse.json({ error: 'Ujian tidak ditemukan' }, { status: 404 })
+    }
+
     const session = await db.examSession.create({
-      data: { userId, examId, startTime: new Date(), status: 'IN_PROGRESS' }
+      data: {
+        userId,
+        examId,
+        startTime: new Date(),
+        status: 'IN_PROGRESS',
+      }
     })
-    return NextResponse.json(session)
+    return NextResponse.json(session, { status: 201 })
   } catch (error) {
     console.error('Create session error:', error)
     return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 })

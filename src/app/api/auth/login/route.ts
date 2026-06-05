@@ -4,29 +4,21 @@ import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { username, password } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email dan password harus diisi' }, { status: 400 })
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username dan password harus diisi' }, { status: 400 })
     }
 
-    // Auto-seed admin if no admin exists
-    const adminCount = await db.user.count({ where: { role: 'ADMIN' } })
-    if (adminCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10)
-      await db.user.create({
-        data: { email: 'admin@cbt.com', password: hashedPassword, name: 'Administrator', role: 'ADMIN' }
-      })
-    }
-
-    const user = await db.user.findUnique({ where: { email } })
+    const user = await db.user.findUnique({ where: { username } })
     if (!user) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 })
+      return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 })
     }
 
+    // Compare password with bcrypt hash
     const isValid = await bcrypt.compare(password, user.password)
     if (!isValid) {
-      return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 })
+      return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 })
     }
 
     if (!user.isActive) {
@@ -34,7 +26,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, class: user.class }
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        class: user.class,
+        subject: user.subject,
+      }
     })
   } catch (error) {
     console.error('Login error:', error)

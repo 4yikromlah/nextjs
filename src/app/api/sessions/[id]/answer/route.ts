@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const { questionId, selectedAnswer, userId } = await request.json()
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const isCorrect = selectedAnswer.toUpperCase() === question.correctAnswer.toUpperCase()
 
-    // Upsert answer
+    // Upsert answer - find existing answer for this session + question
     const existing = await db.answer.findFirst({
       where: { sessionId: id, questionId }
     })
@@ -27,11 +30,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (existing) {
       answer = await db.answer.update({
         where: { id: existing.id },
-        data: { selectedAnswer: selectedAnswer.toUpperCase(), isCorrect, userId }
+        data: {
+          selectedAnswer: selectedAnswer.toUpperCase(),
+          isCorrect,
+          userId,
+        }
       })
     } else {
       answer = await db.answer.create({
-        data: { sessionId: id, questionId, selectedAnswer: selectedAnswer.toUpperCase(), isCorrect, userId }
+        data: {
+          sessionId: id,
+          questionId,
+          selectedAnswer: selectedAnswer.toUpperCase(),
+          isCorrect,
+          userId,
+        }
       })
     }
 

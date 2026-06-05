@@ -9,11 +9,12 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  username  String   @unique
   password  String
   name      String
-  role      String   @default("SISWA") // ADMIN or SISWA
+  role      String   @default("SISWA") // ADMIN, GURU, or SISWA
   class     String?  // Kelas untuk siswa
+  subject   String?  // Mata pelajaran untuk guru
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
