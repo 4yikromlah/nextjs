@@ -33,6 +33,15 @@ export async function POST() {
       { username: 'sari', password: 'gurubahagia', name: 'Sari Wahyuni, S.Pd', role: 'GURU' as const, subject: 'Bahasa Indonesia' },
     ]
 
+    // Seed siswa users
+    const siswaData = [
+      { username: 'ahmadsudiwo', password: 'siswa', name: 'Ahmad Sudiwo', role: 'SISWA' as const, class: 'XII IPA 1', subject: 'Matematika' },
+      { username: 'rianasafitri', password: 'siswa', name: 'Riana Safitri', role: 'SISWA' as const, class: 'XII IPA 2', subject: 'Bahasa Indonesia' },
+      { username: 'budi123', password: 'siswa', name: 'Budi Santoso', role: 'SISWA' as const, class: 'XII IPA 1', subject: 'Matematika' },
+      { username: 'dewi456', password: 'siswa', name: 'Dewi Lestari', role: 'SISWA' as const, class: 'XII IPA 2', subject: 'Bahasa Indonesia' },
+      { username: 'fajar789', password: 'siswa', name: 'Fajar Pratama', role: 'SISWA' as const, class: 'XII IPA 1', subject: 'Matematika' },
+    ]
+
     for (const guru of guruData) {
       const existingGuru = await db.user.findUnique({ where: { username: guru.username } })
       if (!existingGuru) {
@@ -46,6 +55,16 @@ export async function POST() {
           data: { password: hashedPassword }
         })
         results.push(`Guru user "${guru.name}" password updated`)
+      }
+    }
+
+    // Seed siswa users
+    for (const siswa of siswaData) {
+      const existingSiswa = await db.user.findUnique({ where: { username: siswa.username } })
+      if (!existingSiswa) {
+        const hashedPassword = await bcrypt.hash(siswa.password, 10)
+        await db.user.create({ data: { ...siswa, password: hashedPassword } })
+        results.push(`Siswa user "${siswa.name}" created`)
       }
     }
 

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, type ChangeEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutGrid, Users, BarChart3, Lock, Plus, Pencil, Trash2, Search,
-  Eye, ToggleLeft, ToggleRight, Loader2, FileText, UserCheck
+  Eye, ToggleLeft, ToggleRight, Loader2, FileText, UserCheck,
+  Upload
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import KelolaGuru from './KelolaGuru'
+import KelolaSiswa from './KelolaSiswa'
 
 interface Stats {
   totalExams: number
@@ -57,16 +59,6 @@ interface Question {
   correctAnswer: string
   explanation: string | null
   order: number
-}
-
-interface Student {
-  id: string
-  username: string
-  name: string
-  role: string
-  class: string | null
-  isActive: boolean
-  createdAt: string
 }
 
 interface Result {
@@ -108,16 +100,16 @@ export default function AdminDashboard() {
   const [qCorrect, setQCorrect] = useState('A')
   const [qExplanation, setQExplanation] = useState('')
 
-  // Students state
-  const [students, setStudents] = useState<Student[]>([])
-  const [studentSearch, setStudentSearch] = useState('')
-
   // Results state
   const [results, setResults] = useState<Result[]>([])
   const [resultSearch, setResultSearch] = useState('')
 
   // Delete dialog
   const [deleteDialog, setDeleteDialog] = useState<{ type: 'exam' | 'question'; id: string; name: string } | null>(null)
+
+  // Word import
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchStats = useCallback(async () => {
     try {
@@ -142,13 +134,6 @@ export default function AdminDashboard() {
     } catch { /* ignore */ }
   }, [])
 
-  const fetchStudents = useCallback(async () => {
-    try {
-      const res = await fetch('/api/users?role=SISWA')
-      if (res.ok) setStudents(await res.json())
-    } catch { /* ignore */ }
-  }, [])
-
   const fetchResults = useCallback(async () => {
     try {
       const res = await fetch('/api/results')
@@ -158,7 +143,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([fetchStats(), fetchExams(), fetchStudents(), fetchResults()])
+      await Promise.all([fetchStats(), fetchExams(), fetchResults()])
     }
     loadData()
   }, [])
@@ -284,11 +269,36 @@ export default function AdminDashboard() {
     setDeleteDialog(null)
   }
 
-  const filteredStudents = students.filter((s) =>
-    s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    s.username.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    (s.class || '').toLowerCase().includes(studentSearch.toLowerCase())
-  )
+  // Word import handler
+  const handleWordImport = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedExam) return
+
+    setImporting(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('examId', selectedExam.id)
+
+    try {
+      const res = await fetch('/api/import/word', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`${data.count || 0} soal berhasil diimpor dari Word`)
+        fetchQuestions(selectedExam.id)
+        fetchStats()
+      } else {
+        toast.error(data.error || 'Gagal mengimpor file Word')
+      }
+    } catch {
+      toast.error('Gagal mengimpor file')
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const filteredResults = results.filter((r) =>
     r.exam.title.toLowerCase().includes(resultSearch.toLowerCase()) ||
@@ -378,8 +388,9 @@ export default function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Kelola Ujian & Soal */}
+          {/* ==================== Kelola Ujian & Soal ==================== */}
           <TabsContent value="ujian" className="mt-4 space-y-4">
+            {/* Header row */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-800">Kelola Ujian & Soal</h2>
               <Button onClick={() => { resetExamForm(); setShowExamForm(true) }} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md">
@@ -423,195 +434,217 @@ export default function AdminDashboard() {
               )}
             </AnimatePresence>
 
-            {/* Exam List */}
-            {examLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {exams.map((exam) => (
-                  <motion.div key={exam.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} layout>
-                    <div className={`clay p-5 cursor-pointer transition-all ${selectedExam?.id === exam.id ? 'ring-2 ring-blue-400' : ''}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-bold text-gray-800 text-sm">{exam.title}</h3>
-                        <div className="flex items-center gap-1">
-                          {exam.isActive ? (
-                            <span className="badge-active">Aktif</span>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
-                          )}
-                        </div>
-                      </div>
-                      {exam.description && <p className="text-xs text-gray-500 mb-3">{exam.description}</p>}
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-                        <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {exam._count?.questions ?? 0} soal</span>
-                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {exam._count?.sessions ?? 0} peserta</span>
-                        <span>{exam.duration} menit</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleSelectExam(exam)}>
-                          <Eye className="h-3 w-3 mr-1" /> Lihat Soal
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleToggleExam(exam)}>
-                          {exam.isActive ? <ToggleRight className="h-3 w-3 mr-1 text-green-500" /> : <ToggleLeft className="h-3 w-3 mr-1" />}
-                          {exam.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => handleEditExam(exam)}>
-                          <Pencil className="h-3 w-3 mr-1 text-blue-500" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg hover:bg-red-50" onClick={() => setDeleteDialog({ type: 'exam', id: exam.id, name: exam.title })}>
-                          <Trash2 className="h-3 w-3 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {/* Question Panel */}
-            {selectedExam && (
-              <div className="clay-glass p-5 border-0">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-800">Soal: {selectedExam.title}</h3>
-                  <Button onClick={() => setShowQuestionForm(true)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-                    <Plus className="h-4 w-4 mr-1" /> Tambah Soal
-                  </Button>
+            {/* Two-column layout: Exam cards (left) + Preview (right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left Column: Exam Cards stacked vertically */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  <h3 className="text-sm font-bold text-gray-700">DAFTAR UJIAN</h3>
                 </div>
 
-                <AnimatePresence>
-                  {showQuestionForm && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-                      <div className="neo-glass p-5 space-y-4">
-                        <h4 className="font-semibold text-gray-700 text-sm">Tambah Soal Baru</h4>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Teks Soal</Label>
-                          <Textarea value={qText} onChange={(e) => setQText(e.target.value)} placeholder="Tulis soal di sini..." className="neu-input bg-transparent min-h-[80px]" />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {[
-                            { label: 'Opsi A', value: qA, set: setQA },
-                            { label: 'Opsi B', value: qB, set: setQB },
-                            { label: 'Opsi C', value: qC, set: setQC },
-                            { label: 'Opsi D', value: qD, set: setQD },
-                            { label: 'Opsi E', value: qE, set: setQE },
-                          ].map((opt) => (
-                            <div key={opt.label} className="space-y-1">
-                              <Label className="text-xs font-medium">{opt.label}</Label>
-                              <Input value={opt.value} onChange={(e) => opt.set(e.target.value)} className="neu-input bg-transparent h-9 text-sm" />
-                            </div>
-                          ))}
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Jawaban Benar</Label>
-                            <Select value={qCorrect} onValueChange={setQCorrect}>
-                              <SelectTrigger className="neu-input bg-transparent h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {['A', 'B', 'C', 'D', 'E'].map((o) => (
-                                  <SelectItem key={o} value={o}>Opsi {o}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium">Pembahasan (opsional)</Label>
-                          <Textarea value={qExplanation} onChange={(e) => setQExplanation(e.target.value)} placeholder="Pembahasan jawaban..." className="neu-input bg-transparent min-h-[60px]" />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={handleSaveQuestion} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Simpan Soal</Button>
-                          <Button onClick={resetQuestionForm} size="sm" variant="outline" className="rounded-xl">Batalkan</Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Questions List */}
-                {questions.length === 0 ? (
-                  <p className="text-center text-gray-400 text-sm py-4">Belum ada soal</p>
+                {examLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
+                ) : exams.length === 0 ? (
+                  <div className="clay p-8 text-center">
+                    <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">Belum ada ujian</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-                    {questions.map((q, idx) => (
-                      <div key={q.id} className="neu-flat p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-800 mb-1">{idx + 1}. {q.questionText}</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 text-xs text-gray-600">
-                              <span>A. {q.optionA}</span>
-                              <span>B. {q.optionB}</span>
-                              <span>C. {q.optionC}</span>
-                              <span>D. {q.optionD}</span>
-                              <span>E. {q.optionE}</span>
+                  <div className="space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar pr-1">
+                    {exams.map((exam) => (
+                      <motion.div key={exam.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} layout>
+                        <div
+                          className={`clay p-4 cursor-pointer transition-all hover:shadow-lg ${selectedExam?.id === exam.id ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
+                          onClick={() => handleSelectExam(exam)}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-bold text-gray-800 text-sm leading-tight flex-1">{exam.title}</h4>
+                            <div className="flex items-center gap-1 ml-2 shrink-0">
+                              {exam.isActive ? (
+                                <span className="badge-active text-[10px]">Aktif</span>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] px-2">Nonaktif</Badge>
+                              )}
                             </div>
-                            <Badge className="mt-2 bg-green-100 text-green-700 text-xs">{q.correctAnswer}</Badge>
                           </div>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => setDeleteDialog({ type: 'question', id: q.id, name: `Soal ${idx + 1}` })}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {exam.description && <p className="text-xs text-gray-500 mb-2 line-clamp-2">{exam.description}</p>}
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                            <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {exam._count?.questions ?? 0} soal</span>
+                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {exam._count?.sessions ?? 0} peserta</span>
+                            <span>{exam.duration} mnt</span>
+                          </div>
+                          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg px-2" onClick={() => handleToggleExam(exam)}>
+                              {exam.isActive ? <ToggleRight className="h-3 w-3 mr-1 text-green-500" /> : <ToggleLeft className="h-3 w-3 mr-1" />}
+                              {exam.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg" onClick={() => handleEditExam(exam)}>
+                              <Pencil className="h-3 w-3 text-blue-500" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg hover:bg-red-50" onClick={() => setDeleteDialog({ type: 'exam', id: exam.id, name: exam.title })}>
+                              <Trash2 className="h-3 w-3 text-red-500" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
               </div>
-            )}
+
+              {/* Right Column: Preview Panel */}
+              <div className="lg:col-span-7">
+                {!selectedExam ? (
+                  <div className="clay p-12 text-center h-full min-h-[300px] flex flex-col items-center justify-center">
+                    <Eye className="h-12 w-12 text-gray-300 mb-3" />
+                    <h3 className="font-semibold text-gray-400 text-sm">Pilih Ujian untuk Melihat Preview</h3>
+                    <p className="text-xs text-gray-400 mt-1">Klik salah satu kartu ujian di sebelah kiri</p>
+                  </div>
+                ) : (
+                  <div className="clay-glass p-5 border-0 space-y-4">
+                    {/* Preview Header */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-gray-800 text-base">{selectedExam.title}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{selectedExam.description || 'Tidak ada deskripsi'}</p>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <span><FileText className="h-3 w-3 inline mr-1" />{questions.length} soal</span>
+                          <span>{selectedExam.duration} menit</span>
+                          <span>{selectedExam.isActive ? '🟢 Aktif' : '🔴 Nonaktif'}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => setShowQuestionForm(true)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs">
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Tambah Soal
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".docx,.doc"
+                          onChange={handleWordImport}
+                          className="hidden"
+                        />
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={importing}
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl text-xs"
+                        >
+                          {importing ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <Upload className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          Import Word
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Question Form */}
+                    <AnimatePresence>
+                      {showQuestionForm && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <div className="neo-glass p-5 space-y-4">
+                            <h4 className="font-semibold text-gray-700 text-sm">Tambah Soal Baru</h4>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium">Teks Soal</Label>
+                              <Textarea value={qText} onChange={(e) => setQText(e.target.value)} placeholder="Tulis soal di sini..." className="neu-input bg-transparent min-h-[80px]" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {[
+                                { label: 'Opsi A', value: qA, set: setQA },
+                                { label: 'Opsi B', value: qB, set: setQB },
+                                { label: 'Opsi C', value: qC, set: setQC },
+                                { label: 'Opsi D', value: qD, set: setQD },
+                                { label: 'Opsi E', value: qE, set: setQE },
+                              ].map((opt) => (
+                                <div key={opt.label} className="space-y-1">
+                                  <Label className="text-xs font-medium">{opt.label}</Label>
+                                  <Input value={opt.value} onChange={(e) => opt.set(e.target.value)} className="neu-input bg-transparent h-9 text-sm" />
+                                </div>
+                              ))}
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Jawaban Benar</Label>
+                                <Select value={qCorrect} onValueChange={setQCorrect}>
+                                  <SelectTrigger className="neu-input bg-transparent h-9 text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {['A', 'B', 'C', 'D', 'E'].map((o) => (
+                                      <SelectItem key={o} value={o}>Opsi {o}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Pembahasan (opsional)</Label>
+                              <Textarea value={qExplanation} onChange={(e) => setQExplanation(e.target.value)} placeholder="Pembahasan jawaban..." className="neu-input bg-transparent min-h-[60px]" />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button onClick={handleSaveQuestion} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Simpan Soal</Button>
+                              <Button onClick={resetQuestionForm} size="sm" variant="outline" className="rounded-xl">Batalkan</Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Questions List */}
+                    {questions.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-400">Belum ada soal</p>
+                        <p className="text-xs text-gray-400">Tambahkan soal manual atau import dari file Word</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[calc(100vh-520px)] overflow-y-auto custom-scrollbar pr-1">
+                        {questions.map((q, idx) => (
+                          <div key={q.id} className="neu-flat p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-800 mb-1">{idx + 1}. {q.questionText}</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 text-xs text-gray-600">
+                                  <span>A. {q.optionA}</span>
+                                  <span>B. {q.optionB}</span>
+                                  <span>C. {q.optionC}</span>
+                                  <span>D. {q.optionD}</span>
+                                  <span>E. {q.optionE}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge className="bg-green-100 text-green-700 text-xs">Jawaban: {q.correctAnswer}</Badge>
+                                  {q.explanation && (
+                                    <Badge variant="outline" className="text-xs text-gray-500">Pembahasan tersedia</Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => setDeleteDialog({ type: 'question', id: q.id, name: `Soal ${idx + 1}` })}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Kelola Guru */}
+          {/* ==================== Kelola Guru ==================== */}
           <TabsContent value="guru" className="mt-4">
             <KelolaGuru />
           </TabsContent>
 
-          {/* Kelola Siswa */}
-          <TabsContent value="siswa" className="mt-4 space-y-4">
-            <h2 className="text-lg font-bold text-gray-800">Kelola Siswa</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Cari siswa berdasarkan nama, username, atau kelas..."
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-                className="neu-input bg-transparent pl-10 h-11"
-              />
-            </div>
-            <div className="clay-glass overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-xs font-bold">NO</TableHead>
-                    <TableHead className="text-xs font-bold">NAMA SISWA</TableHead>
-                    <TableHead className="text-xs font-bold">USERNAME</TableHead>
-                    <TableHead className="text-xs font-bold">KELAS</TableHead>
-                    <TableHead className="text-xs font-bold">STATUS</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center text-gray-400 py-8">Tidak ada data siswa</TableCell></TableRow>
-                  ) : (
-                    filteredStudents.map((s, idx) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="text-sm">{idx + 1}</TableCell>
-                        <TableCell className="text-sm font-medium">{s.name}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{s.username}</TableCell>
-                        <TableCell><Badge variant="secondary" className="text-xs">{s.class || '-'}</Badge></TableCell>
-                        <TableCell>
-                          {s.isActive ? (
-                            <span className="badge-active">Aktif</span>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          {/* ==================== Kelola Siswa ==================== */}
+          <TabsContent value="siswa" className="mt-4">
+            <KelolaSiswa />
           </TabsContent>
 
-          {/* Hasil Ujian */}
+          {/* ==================== Hasil Ujian ==================== */}
           <TabsContent value="hasil" className="mt-4 space-y-4">
             <h2 className="text-lg font-bold text-gray-800">Hasil Ujian</h2>
             <div className="relative">

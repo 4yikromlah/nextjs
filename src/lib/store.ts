@@ -67,6 +67,17 @@ export interface GuruData {
   createdAt: string
 }
 
+export interface SiswaData {
+  id: string
+  username: string
+  name: string
+  class: string | null
+  subject: string | null
+  password: string
+  isActive: boolean
+  createdAt: string
+}
+
 interface AppState {
   // Auth
   currentUser: User | null
