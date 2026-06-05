@@ -13,10 +13,7 @@ export default function Home() {
   const { user, setUser, currentView, setCurrentView } = useAppStore()
 
   useEffect(() => {
-    // Seed admin on mount
     fetch('/api/auth/seed', { method: 'POST' }).catch(() => {})
-    
-    // Restore session from localStorage
     const stored = localStorage.getItem('cbt_user')
     if (stored) {
       try {
@@ -30,7 +27,7 @@ export default function Home() {
   }, [setUser, setCurrentView])
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-background">
+    <div className="min-h-screen flex flex-col relative bg-[#e8ecf1]">
       {/* Background decorative circles */}
       <div className="bg-circle-1" />
       <div className="bg-circle-2" />
@@ -66,8 +63,8 @@ export default function Home() {
       {/* Sticky Footer */}
       {currentView !== 'login' && (
         <footer className="mt-auto py-3 px-4 text-center">
-          <div className="glass-strong py-2 px-4 rounded-xl inline-flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="w-2 h-2 rounded-full bg-gradient-success animate-pulse" />
+          <div className="inline-flex items-center gap-2 text-xs text-gray-400 font-medium bg-white/40 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/30">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             CBT-Online &copy; {new Date().getFullYear()} &mdash; Sistem Manajemen Ujian Digital
           </div>
         </footer>
