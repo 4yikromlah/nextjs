@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutGrid, Users, BarChart3, Plus, Pencil, Trash2, Search,
   Eye, ToggleLeft, ToggleRight, Loader2, FileText, BookOpen,
-  Upload, Download, CheckSquare, Square, Trash2Icon
+  Upload, Download, CheckSquare, Square, Trash2Icon,
+  Sparkles, Wand2
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -125,6 +126,14 @@ export default function GuruDashboard() {
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // AI question generation
+  const [showAIDialog, setShowAIDialog] = useState(false)
+  const [aiTopic, setAiTopic] = useState('')
+  const [aiSubject, setAiSubject] = useState('')
+  const [aiCount, setAiCount] = useState(5)
+  const [aiDifficulty, setAiDifficulty] = useState('sedang')
+  const [aiGenerating, setAiGenerating] = useState(false)
+
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch(`/api/stats?subject=${encodeURIComponent(guruSubject)}`)
@@ -208,8 +217,54 @@ export default function GuruDashboard() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !exam.isActive }),
       })
-      if (res.ok) { toast.success(exam.isActive ? 'Ujian dinonaktifkan' : 'Ujian diaktifkan'); fetchExams() }
+      if (res.ok) {
+        toast.success(exam.isActive ? 'Ujian dinonaktifkan' : 'Ujian diaktifkan')
+        fetchExams()
+        fetchStats()
+        if (selectedExam?.id === exam.id) {
+          setSelectedExam({ ...selectedExam, isActive: !exam.isActive })
+        }
+      } else {
+        toast.error('Gagal mengubah status ujian')
+      }
     } catch { toast.error('Gagal mengubah status') }
+  }
+
+  // AI question generation handler
+  const handleAIGenerate = async () => {
+    if (!selectedExam) { toast.error('Pilih ujian terlebih dahulu'); return }
+    if (!aiTopic.trim()) { toast.error('Topik/mata pelajaran harus diisi'); return }
+    setAiGenerating(true)
+    try {
+      const res = await fetch('/api/ai/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examId: selectedExam.id,
+          subject: aiSubject || aiTopic,
+          topic: aiTopic,
+          count: aiCount,
+          difficulty: aiDifficulty,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`${data.count} soal berhasil dibuat oleh AI`)
+        fetchQuestions(selectedExam.id)
+        fetchStats()
+        setShowAIDialog(false)
+        setAiTopic('')
+        setAiSubject('')
+        setAiCount(5)
+        setAiDifficulty('sedang')
+      } else {
+        toast.error(data.error || 'Gagal membuat soal dengan AI')
+      }
+    } catch {
+      toast.error('Terjadi kesalahan koneksi ke AI')
+    } finally {
+      setAiGenerating(false)
+    }
   }
 
   const handleDeleteExam = async () => {
@@ -495,6 +550,9 @@ export default function GuruDashboard() {
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={() => setShowQuestionForm(true)} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs"><Plus className="h-3.5 w-3.5 mr-1" />Tambah Soal</Button>
+                        <Button onClick={() => setShowAIDialog(true)} size="sm" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl text-xs shadow-md">
+                          <Sparkles className="h-3.5 w-3.5 mr-1" /> Buat Soal AI
+                        </Button>
                         <input ref={fileInputRef} type="file" accept=".docx,.doc" onChange={handleWordImport} className="hidden" />
                         <Button onClick={() => fileInputRef.current?.click()} disabled={importing} size="sm" variant="outline" className="rounded-xl text-xs">
                           {importing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}Import Word
@@ -712,6 +770,105 @@ export default function GuruDashboard() {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteDialog(null)} className="rounded-xl">Batal</Button>
             <Button onClick={deleteDialog?.type === 'exam' ? handleDeleteExam : handleDeleteQuestion} className="bg-red-500 hover:bg-red-600 text-white rounded-xl">Hapus</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Question Generation Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              Buat Soal dengan AI
+            </DialogTitle>
+            <DialogDescription>
+              Gunakan kecerdasan buatan untuk membuat soal pilihan ganda secara otomatis. Jawaban benar akan bervariasi dan pembahasan dibuat rinci.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Mata Pelajaran</Label>
+              <Input
+                value={aiSubject}
+                onChange={(e) => setAiSubject(e.target.value)}
+                placeholder="Contoh: Matematika, Bahasa Indonesia..."
+                className="neu-input bg-transparent"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Topik / Materi</Label>
+              <Input
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                placeholder="Contoh: Integral, Majas, Sistem Persamaan..."
+                className="neu-input bg-transparent"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Jumlah Soal</Label>
+                <Input
+                  type="number"
+                  value={aiCount}
+                  onChange={(e) => setAiCount(Math.max(1, parseInt(e.target.value) || 5))}
+                  min={1}
+                  max={50}
+                  className="neu-input bg-transparent"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Tingkat Kesulitan</Label>
+                <Select value={aiDifficulty} onValueChange={setAiDifficulty}>
+                  <SelectTrigger className="neu-input bg-transparent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mudah">Mudah</SelectItem>
+                    <SelectItem value="sedang">Sedang</SelectItem>
+                    <SelectItem value="sulit">Sulit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs text-violet-700">
+              <div className="flex items-start gap-2">
+                <Wand2 className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-1">AI akan membuat soal dengan:</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-violet-600">
+                    <li>Jawaban benar bervariasi (A, B, C, D, E)</li>
+                    <li>Pembahasan rinci langkah demi langkah</li>
+                    <li>Sesuai kurikulum Indonesia</li>
+                    <li>Jumlah soal tidak dibatasi (maks 50 per kali)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowAIDialog(false)} className="rounded-xl">
+              Batalkan
+            </Button>
+            <Button
+              onClick={handleAIGenerate}
+              disabled={aiGenerating || !aiTopic.trim()}
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl gap-2"
+            >
+              {aiGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Membuat Soal...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Buat {aiCount} Soal
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

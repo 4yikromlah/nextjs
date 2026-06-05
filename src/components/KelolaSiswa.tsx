@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Search, UserPlus, X, Loader2,
-  Download, Upload, FileSpreadsheet, Users
+  Download, Upload, FileSpreadsheet, Users, CheckSquare, Square, Trash2Icon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +44,39 @@ export default function KelolaSiswa() {
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Siswa | null>(null)
+
+  // Bulk selection
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set())
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false)
+
+  const toggleSelectStudent = (id: string) => {
+    const next = new Set(selectedStudents)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    setSelectedStudents(next)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedStudents.size === filteredStudents.length && filteredStudents.length > 0) {
+      setSelectedStudents(new Set())
+    } else {
+      setSelectedStudents(new Set(filteredStudents.map(s => s.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    try {
+      const ids = Array.from(selectedStudents)
+      for (const id of ids) {
+        await fetch(`/api/students/${id}`, { method: 'DELETE' })
+      }
+      toast.success(`${ids.length} siswa berhasil dihapus`)
+      setSelectedStudents(new Set())
+      fetchStudents()
+    } catch {
+      toast.error('Gagal menghapus siswa')
+    }
+    setBulkDeleteDialog(false)
+  }
 
   // CSV import
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -483,6 +516,27 @@ export default function KelolaSiswa() {
         />
       </div>
 
+      {/* Selection Actions Bar */}
+      {selectedStudents.size > 0 && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between bg-blue-50/80 border border-blue-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button onClick={toggleSelectAll} className="flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 transition-colors">
+              <CheckSquare className="h-4 w-4 text-blue-600" />
+              {selectedStudents.size} siswa terpilih
+            </button>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 text-xs rounded-lg gap-1.5"
+            onClick={() => setBulkDeleteDialog(true)}
+          >
+            <Trash2Icon className="h-3.5 w-3.5" />
+            Hapus {selectedStudents.size} Siswa
+          </Button>
+        </motion.div>
+      )}
+
       {/* Table */}
       <div className="clay-glass overflow-hidden">
         {loading ? (
@@ -493,6 +547,15 @@ export default function KelolaSiswa() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gradient-to-r from-blue-50 to-cyan-50">
+                <TableHead className="text-xs font-bold text-gray-700 w-12 text-center">
+                  <button onClick={toggleSelectAll} className="flex items-center justify-center">
+                    {selectedStudents.size === filteredStudents.length && filteredStudents.length > 0 ? (
+                      <CheckSquare className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <Square className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead className="text-xs font-bold text-gray-700 w-14 text-center">NO</TableHead>
                 <TableHead className="text-xs font-bold text-gray-700">NAMA SISWA</TableHead>
                 <TableHead className="text-xs font-bold text-gray-700">MATA PELAJARAN</TableHead>
@@ -504,7 +567,7 @@ export default function KelolaSiswa() {
             <TableBody>
               {filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-400 py-12">
+                  <TableCell colSpan={7} className="text-center text-gray-400 py-12">
                     <div className="flex flex-col items-center">
                       <Users className="h-10 w-10 text-gray-300 mb-2" />
                       <p className="font-medium">Belum ada data siswa</p>
@@ -514,7 +577,12 @@ export default function KelolaSiswa() {
                 </TableRow>
               ) : (
                 filteredStudents.map((siswa, idx) => (
-                  <TableRow key={siswa.id} className="hover:bg-blue-50/40 transition-colors">
+                  <TableRow key={siswa.id} className={`hover:bg-blue-50/40 transition-colors ${selectedStudents.has(siswa.id) ? 'bg-blue-50/60' : ''}`}>
+                    <TableCell className="text-center">
+                      <button onClick={() => toggleSelectStudent(siswa.id)} className="flex items-center justify-center">
+                        {selectedStudents.has(siswa.id) ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-gray-300 hover:text-gray-500" />}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-sm text-center font-medium text-gray-600">{idx + 1}</TableCell>
                     <TableCell className="text-sm font-semibold text-gray-800">{siswa.name}</TableCell>
                     <TableCell>
@@ -572,6 +640,29 @@ export default function KelolaSiswa() {
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
             >
               Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteDialog} onOpenChange={setBulkDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus Massal</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus {selectedStudents.size} siswa terpilih? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkDeleteDialog(false)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              onClick={handleBulkDelete}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+            >
+              Hapus {selectedStudents.size} Siswa
             </Button>
           </DialogFooter>
         </DialogContent>
