@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
     if (!exam) {
       return NextResponse.json({ error: 'Ujian tidak ditemukan' }, { status: 404 })
     }
+    if (!exam.isActive) {
+      return NextResponse.json({ error: 'Ujian tidak aktif' }, { status: 400 })
+    }
 
     const session = await db.examSession.create({
       data: {

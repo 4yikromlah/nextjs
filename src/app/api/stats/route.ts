@@ -15,12 +15,16 @@ export async function GET(request: NextRequest) {
     if (subject) sessionWhere.exam = { creator: { subject } }
     if (createdBy) sessionWhere.exam = { createdBy }
 
-    const [totalExams, completedSessions] = await Promise.all([
+    const [totalExams, completedSessions, totalQuestions, activeExams] = await Promise.all([
       db.exam.count({ where: examWhere }),
       db.examSession.findMany({
         where: sessionWhere,
         select: { score: true },
       }),
+      db.question.count({
+        where: subject ? { exam: { creator: { subject } } } : {},
+      }),
+      db.exam.count({ where: { ...examWhere, isActive: true } }),
     ])
 
     const totalCompleted = completedSessions.length
@@ -38,6 +42,8 @@ export async function GET(request: NextRequest) {
       completedSessions: totalCompleted,
       averageScore,
       totalStudents,
+      totalQuestions,
+      activeExams,
       defaultPassword: 'admin',
     })
   } catch (error) {

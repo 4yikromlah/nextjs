@@ -31,7 +31,15 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const data = await request.json()
+    const body = await request.json()
+
+    // Whitelist only allowed fields to prevent mass assignment
+    const data: Record<string, unknown> = {}
+    if ('title' in body) data.title = body.title
+    if ('subject' in body) data.subject = body.subject || null
+    if ('description' in body) data.description = body.description || null
+    if ('duration' in body) data.duration = body.duration
+    if ('isActive' in body) data.isActive = body.isActive
 
     const exam = await db.exam.update({
       where: { id },

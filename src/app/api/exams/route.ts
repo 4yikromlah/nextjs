@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {}
 
-    // Filter by creator's subject (for guru dashboard)
+    // Filter by subject: match exam's subject OR creator's subject
     if (subject) {
       where.OR = [
         { subject: subject },
@@ -19,8 +19,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter by exam subject (for student dashboard - show exams matching their subject)
+    // This takes precedence over the subject filter
     if (studentSubject) {
-      where.subject = studentSubject
+      where.OR = [
+        { subject: studentSubject },
+        { creator: { subject: studentSubject } },
+      ]
+      delete where.subject
     }
 
     if (createdBy) {

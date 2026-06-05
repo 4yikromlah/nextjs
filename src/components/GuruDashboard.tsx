@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback, useRef, type ChangeEvent } from 'reac
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutGrid, Users, BarChart3, Plus, Pencil, Trash2, Search,
-  Eye, ToggleLeft, ToggleRight, Loader2, FileText, BookOpen,
+  Eye, ToggleLeft, ToggleRight, Loader2, FileText, BookOpen, AlertTriangle,
   Upload, Download, CheckSquare, Square, Trash2Icon,
-  Sparkles, Wand2
+  Sparkles
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useOnlineStatus } from '@/lib/useOnlineStatus'
@@ -145,7 +145,7 @@ export default function GuruDashboard() {
       setShowAIDialog(false)
       toast.warning('Koneksi internet terputus. Fitur AI tidak tersedia.')
     }
-  }, [isOnline])
+  }, [isOnline, showAIDialog])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -192,7 +192,6 @@ export default function GuruDashboard() {
   }, [guruSubject])
 
   useEffect(() => {
-    if (!guruSubject) return
     const loadData = async () => {
       await Promise.all([fetchStats(), fetchExams(), fetchStudents(), fetchResults()])
     }
@@ -354,7 +353,7 @@ export default function GuruDashboard() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedQuestions.size === questions.length) setSelectedQuestions(new Set())
+    if (selectedQuestions.size === questions.length && questions.length > 0) setSelectedQuestions(new Set())
     else setSelectedQuestions(new Set(questions.map(q => q.id)))
   }
 
@@ -426,11 +425,22 @@ export default function GuruDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Dashboard Guru — {currentUser?.name}</h2>
-                <p className="text-sm text-gray-500">Mata Pelajaran: <span className="font-semibold text-emerald-600">{guruSubject}</span></p>
+                <p className="text-sm text-gray-500">Mata Pelajaran: <span className="font-semibold text-emerald-600">{guruSubject || 'Belum ditentukan'}</span></p>
               </div>
             </div>
           </div>
         </motion.div>
+
+        {/* No subject warning */}
+        {!guruSubject && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Mata pelajaran belum ditentukan</p>
+              <p className="text-xs text-amber-600 mt-1">Hubungi administrator untuk mengatur mata pelajaran Anda. Dashboard akan menampilkan semua data tanpa filter.</p>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -877,7 +887,7 @@ export default function GuruDashboard() {
             </div>
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs text-violet-700">
               <div className="flex items-start gap-2">
-                <Wand2 className="h-4 w-4 shrink-0 mt-0.5" />
+                <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold mb-1">AI akan membuat soal dengan:</p>
                   <ul className="list-disc list-inside space-y-0.5 text-violet-600">

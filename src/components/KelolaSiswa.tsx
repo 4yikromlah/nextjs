@@ -220,7 +220,7 @@ export default function KelolaSiswa() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+    if (!file.name.endsWith('.csv')) {
       toast.error('Hanya file CSV yang didukung')
       return
     }

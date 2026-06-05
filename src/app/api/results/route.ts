@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (subject) {
-      // Filter by subject through the exam's creator's subject field
+      // Filter by subject through both exam's subject field AND creator's subject field
       where.exam = {
-        creator: { subject: subject }
+        OR: [
+          { subject: subject },
+          { creator: { subject: subject } }
+        ]
       }
     }
 

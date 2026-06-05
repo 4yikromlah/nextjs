@@ -43,6 +43,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 })
     }
 
+    // Prevent double-submit: if session already completed, return existing result
+    if (session.status === 'COMPLETED') {
+      const correctAnswers = session.answers.filter(a => a.isCorrect === true).length
+      const totalQuestions = session.exam.questions.length
+      const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
+      return NextResponse.json({
+        ...session,
+        score,
+        correctAnswers,
+        totalQuestions,
+        message: 'Ujian sudah pernah dikumpulkan',
+      })
+    }
+
     // Calculate score
     const totalQuestions = session.exam.questions.length
     const correctAnswers = session.answers.filter(a => a.isCorrect === true).length

@@ -54,17 +54,18 @@ export default function ExamTaking() {
     setLoading(true)
     try {
       const examRes = await fetch(`/api/exams/${activeExamId}`)
+      let examDurationMin = 60
       if (examRes.ok) {
         const examData = await examRes.json()
         setQuestions(examData.questions || [])
         setExamTitle(examData.title)
         setExamSubject(examData.subject || null)
         setExamDuration(examData.duration)
-        setTimeLeft(examData.duration * 60)
+        examDurationMin = examData.duration
         setTotalQuestions((examData.questions || []).length)
       }
 
-      // Load existing answers
+      // Load existing answers and calculate remaining time
       const sessionRes = await fetch(`/api/sessions/${activeSessionId}`)
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json()
@@ -77,6 +78,17 @@ export default function ExamTaking() {
           }
         }
         setAnswers(existingAnswers)
+
+        // Calculate remaining time from session start time
+        if (sessionData.startTime) {
+          const startTime = new Date(sessionData.startTime).getTime()
+          const durationMs = examDurationMin * 60 * 1000
+          const elapsed = Date.now() - startTime
+          const remaining = Math.max(0, Math.round((durationMs - elapsed) / 1000))
+          setTimeLeft(remaining)
+        } else {
+          setTimeLeft(examDurationMin * 60)
+        }
       }
     } catch { /* ignore */ }
     setLoading(false)

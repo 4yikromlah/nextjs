@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutGrid, Users, BarChart3, Lock, Plus, Pencil, Trash2, Search,
   Eye, ToggleLeft, ToggleRight, Loader2, FileText, UserCheck,
-  Upload, Download, CheckSquare, Square, Trash2Icon, Sparkles, Wand2
+  Upload, Download, CheckSquare, Square, Trash2Icon, Sparkles
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useOnlineStatus } from '@/lib/useOnlineStatus'
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
       setShowAIDialog(false)
       toast.warning('Koneksi internet terputus. Fitur AI tidak tersedia.')
     }
-  }, [isOnline])
+  }, [isOnline, showAIDialog])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
 
   // Toggle select all questions
   const toggleSelectAll = () => {
-    if (selectedQuestions.size === questions.length) {
+    if (selectedQuestions.size === questions.length && questions.length > 0) {
       setSelectedQuestions(new Set())
     } else {
       setSelectedQuestions(new Set(questions.map(q => q.id)))
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
                 <div className="h-11 w-11 rounded-xl bg-rose-100 flex items-center justify-center"><Lock className="h-5 w-5 text-rose-600" /></div>
                 <div>
                   <p className="text-xs text-gray-500 font-medium">PASSWORD DEFAULT</p>
-                  <p className="text-2xl font-bold text-gray-800">admin123</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats?.defaultPassword ?? 'admin'}</p>
                 </div>
               </div>
             </div>
@@ -911,7 +911,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 text-xs text-violet-700">
               <div className="flex items-start gap-2">
-                <Wand2 className="h-4 w-4 shrink-0 mt-0.5" />
+                <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold mb-1">AI akan membuat soal dengan:</p>
                   <ul className="list-disc list-inside space-y-0.5 text-violet-600">
