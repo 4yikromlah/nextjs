@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, ChevronLeft, ChevronRight, Send, AlertTriangle, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Clock, ChevronLeft, ChevronRight, Send, AlertTriangle, CheckCircle2, XCircle, Loader2, User, BookOpen } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +41,7 @@ export default function ExamTaking() {
   const [submitting, setSubmitting] = useState(false)
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
   const [examTitle, setExamTitle] = useState('')
+  const [examSubject, setExamSubject] = useState<string | null>(null)
   const [examDuration, setExamDuration] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState<number | null>(null)
@@ -57,6 +58,7 @@ export default function ExamTaking() {
         const examData = await examRes.json()
         setQuestions(examData.questions || [])
         setExamTitle(examData.title)
+        setExamSubject(examData.subject || null)
         setExamDuration(examData.duration)
         setTimeLeft(examData.duration * 60)
         setTotalQuestions((examData.questions || []).length)
@@ -177,10 +179,12 @@ export default function ExamTaking() {
   const answeredCount = Object.values(answers).filter((a) => a.selectedAnswer).length
   const currentQuestion = questions[currentIdx]
   const isLowTime = timeLeft <= 300 && timeLeft > 0
+  const totalTime = examDuration * 60
+  const progressPercent = totalTime > 0 ? (timeLeft / totalTime) * 100 : 0
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f0f4f8] flex items-center justify-center">
+      <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Memuat soal ujian...</p>
@@ -192,8 +196,8 @@ export default function ExamTaking() {
   // Submitted result view
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#f0f4f8] flex items-center justify-center">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 max-w-lg w-full mx-4 text-center">
+      <div className="min-h-screen bg-[#f3f4f6] flex items-center justify-center">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-lg p-8 max-w-lg w-full mx-4 text-center">
           {score !== null && score >= 70 ? (
             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           ) : (
@@ -201,7 +205,7 @@ export default function ExamTaking() {
           )}
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Ujian Selesai!</h2>
           <p className="text-gray-500 mb-4">{examTitle}</p>
-          <div className="neu-flat p-6 mb-4">
+          <div className="bg-gray-50 rounded-xl p-6 mb-4">
             <p className="text-sm text-gray-500">Nilai Anda</p>
             <p className={`text-5xl font-bold ${score !== null && score >= 70 ? 'text-green-600' : 'text-red-600'}`}>
               {score ?? '-'}
@@ -219,144 +223,207 @@ export default function ExamTaking() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f4f8]">
-      <div className="max-w-6xl mx-auto px-4 py-4">
-        {/* Timer Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-strong p-4 mb-4 flex items-center justify-between"
-        >
-          <div>
-            <h2 className="font-bold text-gray-800 text-sm">{examTitle}</h2>
-            <p className="text-xs text-gray-500">{answeredCount} dari {questions.length} soal dijawab</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${isLowTime ? 'bg-red-100 timer-pulse' : 'bg-blue-50'}`}>
-              <Clock className={`h-4 w-4 ${isLowTime ? 'text-red-500' : 'text-blue-500'}`} />
-              <span className={`font-bold text-sm font-mono ${isLowTime ? 'text-red-600' : 'text-blue-700'}`}>
-                {formatTime(timeLeft)}
-              </span>
-            </div>
-            <Button
-              onClick={() => setShowConfirmSubmit(true)}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md"
-              size="sm"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Kumpulkan
-            </Button>
-          </div>
-        </motion.div>
+    <div className="min-h-screen bg-[#f3f4f6]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="flex flex-col lg:flex-row gap-4">
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Question Navigation Sidebar */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="clay-glass p-4 sticky top-24">
-              <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Navigasi Soal</h3>
-              <div className="grid grid-cols-5 gap-2">
-                {questions.map((q, idx) => {
-                  const isAnswered = answers[q.questionId]?.selectedAnswer
-                  const isCurrent = idx === currentIdx
-                  return (
-                    <button
-                      key={q.id}
-                      onClick={() => setCurrentIdx(idx)}
-                      className={`h-9 w-9 rounded-lg text-xs font-bold transition-all ${
-                        isCurrent
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                          : isAnswered
-                          ? 'bg-green-100 text-green-700 border border-green-200'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
-                    >
-                      {idx + 1}
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="mt-4 space-y-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-green-100 border border-green-200" />
-                  <span className="text-gray-600">Sudah dijawab</span>
+          {/* ===== LEFT SIDEBAR ===== */}
+          <div className="w-full lg:w-72 shrink-0 order-2 lg:order-1">
+            <div className="lg:sticky lg:top-24 space-y-4">
+
+              {/* Timer Card */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white rounded-2xl shadow-md overflow-hidden"
+              >
+                <div className="px-5 pt-4 pb-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sisa Waktu Mengerjakan</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded bg-gray-100" />
-                  <span className="text-gray-600">Belum dijawab</span>
+                <div className="px-5 pb-4 text-center">
+                  <div className={`text-5xl font-bold font-mono tracking-wider ${isLowTime ? 'text-red-500' : 'text-blue-600'}`}>
+                    {formatTime(timeLeft)}
+                  </div>
+                  <p className={`text-xs font-medium mt-1 ${isLowTime ? 'text-red-400' : 'text-gray-400'}`}>
+                    REMAINING TIME
+                  </p>
                 </div>
-              </div>
+                {/* Progress Bar */}
+                <div className="h-2 bg-gray-100">
+                  <motion.div
+                    className={`h-full rounded-r-full ${isLowTime ? 'bg-red-500' : 'bg-blue-500'}`}
+                    initial={{ width: '100%' }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+                {/* Student Info */}
+                <div className="px-5 py-3 border-t border-gray-50 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="text-xs text-gray-500">Siswa:</span>
+                    <span className="text-xs font-semibold text-gray-700">{currentUser?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="text-xs text-gray-500">Mata Pelajaran:</span>
+                    <span className="text-xs font-semibold text-gray-700">{examSubject || currentUser?.subject || '-'}</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Question Navigator */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-2xl shadow-md p-5"
+              >
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Question Navigator</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {questions.map((q, idx) => {
+                    const isAnswered = answers[q.questionId]?.selectedAnswer
+                    const isCurrent = idx === currentIdx
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => setCurrentIdx(idx)}
+                        className={`h-9 w-9 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center ${
+                          isCurrent
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                            : isAnswered
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 shadow-sm'
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Status Legend */}
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-white border-2 border-gray-300" />
+                    <span className="text-xs text-gray-500">Belum Dijawab</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-blue-500" />
+                    <span className="text-xs text-gray-500">Terjawab</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-red-500" />
+                    <span className="text-xs text-gray-500">Ragu-ragu</span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
 
-          {/* Question Content */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
+          {/* ===== MAIN CONTENT AREA ===== */}
+          <div className="flex-1 order-1 lg:order-2">
             {currentQuestion && (
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentQuestion.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="clay-glass p-6">
-                    {/* Question */}
-                    <div className="mb-6">
-                      <Badge className="bg-blue-100 text-blue-700 text-xs mb-3">
-                        Soal {currentIdx + 1} dari {questions.length}
-                      </Badge>
-                      <p className="text-base font-medium text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {currentQuestion.questionText}
-                      </p>
+                  <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+                    {/* Question Header with tags */}
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {examSubject && (
+                          <Badge className="bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-100 border-0">
+                            {examSubject}
+                          </Badge>
+                        )}
+                        <Badge className="bg-blue-100 text-blue-700 text-xs font-semibold hover:bg-blue-100 border-0">
+                          {examTitle}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-gray-400 font-mono">
+                        CBT-ID: {currentIdx + 1}-{questions.length}-{activeExamId?.slice(-4) || '0'}
+                      </span>
                     </div>
 
-                    {/* Options */}
-                    <div className="space-y-3">
-                      {OPTION_LABELS.map((label) => {
-                        const optionText = currentQuestion[`option${label}` as keyof Question] as string
-                        const selectedAnswer = answers[currentQuestion.questionId]?.selectedAnswer
-                        const isSelected = selectedAnswer === label
+                    {/* Question Body */}
+                    <div className="px-6 pt-5 pb-6">
+                      {/* Question Number & Text */}
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="h-7 w-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            {currentIdx + 1}
+                          </span>
+                          <span className="text-xs text-gray-400 font-medium">Soal {currentIdx + 1} dari {questions.length}</span>
+                        </div>
+                        <p className="text-base font-medium text-gray-800 leading-relaxed whitespace-pre-wrap pl-9">
+                          {currentQuestion.questionText}
+                        </p>
+                      </div>
 
-                        return (
-                          <div
-                            key={label}
-                            onClick={() => selectAnswer(currentQuestion.questionId, label)}
-                            className={`option-card flex items-center gap-3 ${isSelected ? 'selected' : ''}`}
-                          >
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                              isSelected
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              {label}
-                            </div>
-                            <span className={`text-sm ${isSelected ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-                              {optionText}
-                            </span>
-                          </div>
-                        )
-                      })}
+                      {/* Answer Options */}
+                      <div className="space-y-3 pl-9">
+                        {OPTION_LABELS.map((label) => {
+                          const optionText = currentQuestion[`option${label}` as keyof Question] as string
+                          const selectedAnswer = answers[currentQuestion.questionId]?.selectedAnswer
+                          const isSelected = selectedAnswer === label
+
+                          return (
+                            <motion.div
+                              key={label}
+                              whileHover={{ scale: 1.005 }}
+                              whileTap={{ scale: 0.995 }}
+                              onClick={() => selectAnswer(currentQuestion.questionId, label)}
+                              className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-blue-500 bg-blue-50 shadow-sm'
+                                  : 'border-gray-100 bg-gray-50 hover:border-blue-200 hover:bg-blue-50/50'
+                              }`}
+                            >
+                              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all duration-200 ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                  : 'bg-white text-gray-500 border border-gray-200'
+                              }`}>
+                                {label}
+                              </div>
+                              <span className={`text-sm leading-relaxed ${isSelected ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                                {optionText}
+                              </span>
+                            </motion.div>
+                          )
+                        })}
+                      </div>
                     </div>
 
-                    {/* Navigation */}
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                    {/* Bottom Navigation */}
+                    <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
                       <Button
                         variant="outline"
                         onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
                         disabled={currentIdx === 0}
-                        className="rounded-xl"
+                        className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Sebelumnya
                       </Button>
-                      <span className="text-xs text-gray-400">
-                        {currentIdx + 1} / {questions.length}
-                      </span>
+
+                      <Button
+                        onClick={() => setShowConfirmSubmit(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-200 px-5"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Kumpulkan Ujian
+                      </Button>
+
                       <Button
                         variant="outline"
                         onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
                         disabled={currentIdx === questions.length - 1}
-                        className="rounded-xl"
+                        className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
                       >
                         Selanjutnya
                         <ChevronRight className="h-4 w-4 ml-1" />
@@ -395,7 +462,7 @@ export default function ExamTaking() {
             <Button
               onClick={handleSubmitExam}
               disabled={submitting}
-              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
             >
               {submitting ? (
                 <span className="flex items-center gap-2">
