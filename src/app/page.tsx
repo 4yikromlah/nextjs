@@ -1,14 +1,27 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore, type View } from '@/lib/store'
 import Header from '@/components/Header'
 import LoginPage from '@/components/LoginPage'
-import AdminDashboard from '@/components/AdminDashboard'
-import GuruDashboard from '@/components/GuruDashboard'
-import StudentDashboard from '@/components/StudentDashboard'
-import ExamTaking from '@/components/ExamTaking'
+
+// Lazy load heavy dashboard components to reduce initial compilation memory
+const AdminDashboard = lazy(() => import('@/components/AdminDashboard'))
+const GuruDashboard = lazy(() => import('@/components/GuruDashboard'))
+const StudentDashboard = lazy(() => import('@/components/StudentDashboard'))
+const ExamTaking = lazy(() => import('@/components/ExamTaking'))
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-sm text-gray-400">Memuat...</p>
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
   const { currentView, setCurrentView, currentUser, setCurrentUser } = useAppStore()
@@ -38,13 +51,13 @@ export default function Home() {
       case 'login':
         return <LoginPage />
       case 'admin':
-        return currentUser ? <AdminDashboard /> : <LoginPage />
+        return currentUser ? <Suspense fallback={<LoadingFallback />}><AdminDashboard /></Suspense> : <LoginPage />
       case 'guru':
-        return currentUser ? <GuruDashboard /> : <LoginPage />
+        return currentUser ? <Suspense fallback={<LoadingFallback />}><GuruDashboard /></Suspense> : <LoginPage />
       case 'student':
-        return currentUser ? <StudentDashboard /> : <LoginPage />
+        return currentUser ? <Suspense fallback={<LoadingFallback />}><StudentDashboard /></Suspense> : <LoginPage />
       case 'exam':
-        return currentUser ? <ExamTaking /> : <LoginPage />
+        return currentUser ? <Suspense fallback={<LoadingFallback />}><ExamTaking /></Suspense> : <LoginPage />
       default:
         return <LoginPage />
     }

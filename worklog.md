@@ -52,3 +52,28 @@ Stage Summary:
 - If AI dialog is open and connection drops, dialog auto-closes with toast warning
 - Both AdminDashboard and GuruDashboard updated
 - Lint passes cleanly
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix page not displaying/stagnant in preview panel
+
+Work Log:
+- Analyzed user's screenshot showing "Z" loading screen - page was stuck and not rendering
+- Diagnosed TWO root causes:
+  1. **CORS blocking**: Next.js was blocking cross-origin requests from preview panel domain (*.space-z.ai), preventing JS/CSS from loading
+  2. **High memory usage**: Dev server (Turbopack) uses ~1.3GB RSS memory, getting OOM killed in sandbox
+- Fixed CORS issue by adding `"**.space-z.ai"` to `allowedDevOrigins` in `next.config.ts` (Next.js supports `**` wildcard for subdomain matching)
+- Added lazy loading (React.lazy + Suspense) for heavy dashboard components (AdminDashboard, GuruDashboard, StudentDashboard, ExamTaking) to reduce initial compilation memory
+- Removed `output: "standalone"` from next.config.ts as it conflicts with `next start`
+- Tested production build (`next build` + `next start`) which uses only ~180MB vs dev server's ~1.3GB
+- Verified page renders correctly: login page shows SIMULASI-Online with portal tabs, form fields, and all UI elements
+- All API endpoints verified working: /api/auth/login, /api/auth/seed, /api/exams
+- Agent browser confirmed: login page renders correctly with all portal tabs (Siswa, Guru, Admin), form fields, and interactive elements
+
+Stage Summary:
+- **CORS fix**: Added `**.space-z.ai` to allowedDevOrigins to allow preview panel to load JS/CSS
+- **Lazy loading**: Dashboard components now load on-demand, reducing initial compilation memory
+- **Server stability**: Dev server still uses high memory (~1.3GB) but page renders correctly when server is running
+- **Production alternative**: `next build` + `next start` uses only ~180MB and is more stable
+- All code passes lint check
