@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CBT-Online - Sistem Manajemen Ujian Digital",
-  description: "Platform CBT (Computer-Based Test) untuk ujian online dengan fitur lengkap: manajemen soal, import Word, auto-scoring, dan pembahasan jawaban.",
+  title: "API Tester - REST API Testing Tool",
+  description: "A clean and modern REST API testing tool. Send HTTP requests, inspect responses, and debug APIs with ease.",
   icons: {
     icon: "/logo.svg",
   },
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
