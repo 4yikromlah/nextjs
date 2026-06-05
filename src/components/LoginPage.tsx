@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import {
   Monitor, Eye, EyeOff, User, Lock, GraduationCap,
   BookOpen, ShieldCheck, Clock, Info, Play, Loader2
@@ -192,11 +191,8 @@ export default function LoginPage() {
 
       {/* Main Login Card */}
       <main className="flex-1 flex items-center justify-center p-4 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="w-full max-w-[440px] bg-white rounded-xl shadow-lg shadow-black/5 overflow-hidden"
+        <div
+          className="w-full max-w-[440px] bg-white rounded-xl shadow-lg shadow-black/5 overflow-hidden animate-fade-in"
         >
           {/* Card Header - Logo & Branding */}
           <div className="text-center pt-8 pb-4 px-6">
@@ -242,15 +238,7 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleLogin} className="px-6 pb-2 space-y-3">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={portal}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-3"
-              >
+            <div key={portal} className="space-y-3 animate-fade-in">
                 {/* Username Field */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-xs font-semibold text-[#1A3A5F]">
@@ -314,8 +302,7 @@ export default function LoginPage() {
                     </Select>
                   </div>
                 )}
-              </motion.div>
-            </AnimatePresence>
+            </div>
 
             {/* Info Box */}
             <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-3 flex gap-2">
@@ -352,7 +339,7 @@ export default function LoginPage() {
               SIMULASI-Online &copy; {new Date().getFullYear()} &mdash; Sistem Manajemen Ujian Digital
             </p>
           </div>
-        </motion.div>
+        </div>
       </main>
     </div>
   )

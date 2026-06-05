@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, lazy, Suspense } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore, type View } from '@/lib/store'
 import Header from '@/components/Header'
 import LoginPage from '@/components/LoginPage'
@@ -75,17 +74,7 @@ export default function Home() {
       {showHeader && <Header />}
 
       <main className="flex-1 relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {renderView()}
-          </motion.div>
-        </AnimatePresence>
+        {renderView()}
       </main>
 
       {/* Sticky Footer */}
