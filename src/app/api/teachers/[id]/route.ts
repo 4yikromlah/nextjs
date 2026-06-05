@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
+const DEFAULT_GURU_PASSWORD = 'guru'
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,14 +17,21 @@ export async function GET(
         username: true,
         name: true,
         subject: true,
-        password: true,
+        plainPassword: true,
         createdAt: true,
       }
     })
     if (!teacher) {
       return NextResponse.json({ error: 'Guru tidak ditemukan' }, { status: 404 })
     }
-    return NextResponse.json({ ...teacher, password: 'guru' })
+    return NextResponse.json({
+      id: teacher.id,
+      username: teacher.username,
+      name: teacher.name,
+      subject: teacher.subject,
+      password: teacher.plainPassword || DEFAULT_GURU_PASSWORD,
+      createdAt: teacher.createdAt,
+    })
   } catch (error) {
     console.error('Get teacher error:', error)
     return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 })
@@ -56,7 +65,10 @@ export async function PUT(
     if (username) updateData.username = username
     if (name) updateData.name = name
     if (subject !== undefined) updateData.subject = subject || null
-    if (password && password.trim() !== '') updateData.password = await bcrypt.hash(password, 10)
+    if (password && password.trim() !== '') {
+      updateData.password = await bcrypt.hash(password, 10)
+      updateData.plainPassword = password
+    }
 
     const teacher = await db.user.update({
       where: { id },
@@ -68,7 +80,7 @@ export async function PUT(
       username: teacher.username,
       name: teacher.name,
       subject: teacher.subject,
-      password: password && password.trim() !== '' ? password : 'guru',
+      password: teacher.plainPassword || DEFAULT_GURU_PASSWORD,
       createdAt: teacher.createdAt,
     })
   } catch (error) {

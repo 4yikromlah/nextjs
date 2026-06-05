@@ -18,6 +18,7 @@ export async function GET(
         name: true,
         class: true,
         subject: true,
+        plainPassword: true,
         isActive: true,
         createdAt: true,
       }
@@ -25,7 +26,16 @@ export async function GET(
     if (!student) {
       return NextResponse.json({ error: 'Siswa tidak ditemukan' }, { status: 404 })
     }
-    return NextResponse.json({ ...student, password: DEFAULT_SISWA_PASSWORD })
+    return NextResponse.json({
+      id: student.id,
+      username: student.username,
+      name: student.name,
+      class: student.class,
+      subject: student.subject,
+      password: student.plainPassword || DEFAULT_SISWA_PASSWORD,
+      isActive: student.isActive,
+      createdAt: student.createdAt,
+    })
   } catch (error) {
     console.error('Get student error:', error)
     return NextResponse.json({ error: 'Terjadi kesalahan server' }, { status: 500 })
@@ -60,7 +70,10 @@ export async function PUT(
     if (name !== undefined) updateData.name = name
     if (studentClass !== undefined) updateData.class = studentClass || null
     if (subject !== undefined) updateData.subject = subject || null
-    if (password && password.trim() !== '') updateData.password = await bcrypt.hash(password, 10)
+    if (password && password.trim() !== '') {
+      updateData.password = await bcrypt.hash(password, 10)
+      updateData.plainPassword = password
+    }
 
     // Only update if there are fields to update
     if (Object.keys(updateData).length === 0) {
@@ -78,7 +91,7 @@ export async function PUT(
       name: student.name,
       class: student.class,
       subject: student.subject,
-      password: password && password.trim() !== '' ? password : DEFAULT_SISWA_PASSWORD,
+      password: student.plainPassword || DEFAULT_SISWA_PASSWORD,
       isActive: student.isActive,
       createdAt: student.createdAt,
     })

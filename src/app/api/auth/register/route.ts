@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
       data: {
         username,
         password: hashedPassword,
+        plainPassword: password,
         name,
         role: role || 'SISWA',
         class: className || null,

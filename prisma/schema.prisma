@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  name      String
-  role      String   @default("SISWA") // ADMIN, GURU, or SISWA
-  class     String?  // Kelas untuk siswa
-  subject   String?  // Mata pelajaran untuk guru
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  username      String   @unique
+  password      String
+  plainPassword String?  // Plain text password for admin display
+  name          String
+  role          String   @default("SISWA") // ADMIN, GURU, or SISWA
+  class         String?  // Kelas untuk siswa
+  subject       String?  // Mata pelajaran untuk guru/siswa
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sessions    ExamSession[]
   answers     Answer[]

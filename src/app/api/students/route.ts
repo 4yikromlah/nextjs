@@ -22,14 +22,21 @@ export async function GET(request: NextRequest) {
         name: true,
         class: true,
         subject: true,
+        plainPassword: true,
         isActive: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' }
     })
     const result = students.map(s => ({
-      ...s,
-      password: DEFAULT_SISWA_PASSWORD,
+      id: s.id,
+      username: s.username,
+      name: s.name,
+      class: s.class,
+      subject: s.subject,
+      password: s.plainPassword || DEFAULT_SISWA_PASSWORD,
+      isActive: s.isActive,
+      createdAt: s.createdAt,
     }))
     return NextResponse.json(result)
   } catch (error) {
@@ -60,6 +67,7 @@ export async function POST(request: NextRequest) {
         username,
         name,
         password: hashedPassword,
+        plainPassword: rawPassword,
         role: 'SISWA',
         class: studentClass || null,
         subject: subject || null,
@@ -120,6 +128,7 @@ export async function PUT(request: NextRequest) {
           username,
           name,
           password: hashedPassword,
+          plainPassword: password,
           role: 'SISWA',
           class: studentClass || null,
           subject: subject || null,

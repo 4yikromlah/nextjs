@@ -13,14 +13,19 @@ export async function GET() {
         username: true,
         name: true,
         subject: true,
+        plainPassword: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' }
     })
-    // Return with default password display
+    // Return with actual plain password
     const result = teachers.map(t => ({
-      ...t,
-      password: DEFAULT_GURU_PASSWORD,
+      id: t.id,
+      username: t.username,
+      name: t.name,
+      subject: t.subject,
+      password: t.plainPassword || DEFAULT_GURU_PASSWORD,
+      createdAt: t.createdAt,
     }))
     return NextResponse.json(result)
   } catch (error) {
@@ -49,6 +54,7 @@ export async function POST(request: NextRequest) {
         username,
         name,
         password: hashedPassword,
+        plainPassword: password,
         role: 'GURU',
         subject: subject || null,
       }

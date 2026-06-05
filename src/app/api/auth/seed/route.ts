@@ -14,6 +14,7 @@ export async function POST() {
         data: {
           username: 'admin',
           password: hashedAdminPassword,
+          plainPassword: 'admin',
           name: 'Administrator',
           role: 'ADMIN',
         }
@@ -22,7 +23,7 @@ export async function POST() {
     } else {
       await db.user.update({
         where: { id: existingAdmin.id },
-        data: { password: hashedAdminPassword }
+        data: { password: hashedAdminPassword, plainPassword: 'admin' }
       })
       results.push('Admin user password updated')
     }
@@ -46,13 +47,13 @@ export async function POST() {
       const existingGuru = await db.user.findUnique({ where: { username: guru.username } })
       if (!existingGuru) {
         const hashedPassword = await bcrypt.hash(guru.password, 10)
-        await db.user.create({ data: { ...guru, password: hashedPassword } })
+        await db.user.create({ data: { ...guru, password: hashedPassword, plainPassword: guru.password } })
         results.push(`Guru user "${guru.name}" created`)
       } else {
         const hashedPassword = await bcrypt.hash(guru.password, 10)
         await db.user.update({
           where: { id: existingGuru.id },
-          data: { password: hashedPassword }
+          data: { password: hashedPassword, plainPassword: guru.password }
         })
         results.push(`Guru user "${guru.name}" password updated`)
       }
@@ -63,8 +64,16 @@ export async function POST() {
       const existingSiswa = await db.user.findUnique({ where: { username: siswa.username } })
       if (!existingSiswa) {
         const hashedPassword = await bcrypt.hash(siswa.password, 10)
-        await db.user.create({ data: { ...siswa, password: hashedPassword } })
+        await db.user.create({ data: { ...siswa, password: hashedPassword, plainPassword: siswa.password } })
         results.push(`Siswa user "${siswa.name}" created`)
+      } else {
+        // Update plainPassword for existing siswa if missing
+        if (!existingSiswa.plainPassword) {
+          await db.user.update({
+            where: { id: existingSiswa.id },
+            data: { plainPassword: siswa.password }
+          })
+        }
       }
     }
 
